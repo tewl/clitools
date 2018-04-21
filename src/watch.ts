@@ -1,7 +1,4 @@
 #!/usr/bin/env ts-node
-// #! ./node_modules/.bin/ts-node
-
-// #!/usr/bin/env ts-node
 import {watch} from "fs";
 import * as BBPromise from "bluebird";
 import * as _ from "lodash";
@@ -41,11 +38,9 @@ function main() {
             console.log("----- Filesystem activity detected.  Killing current child process. -----");
             spawnResult.childProcess.kill();
         }
-
         if (timerId) {
             clearTimeout(timerId);
         }
-
         timerId = setTimeout(performAction, DEBOUNCE_DELAY);
     }
 
@@ -65,7 +60,6 @@ function main() {
             spawnResult = undefined;
         });
     }
-
 }
 
 main();
