@@ -45,6 +45,7 @@ function main() {
 
     console.log(`Watching ${subject}...`);
     const watcher = new ListenerTracker(watch(subject, {recursive: true}));
+    let isEnabled = true;
     let timerId: NodeJS.Timer | undefined = undefined;
     let spawnResult: ISpawnResult | undefined = undefined;
     watcher.on("change", onFilesystemActivity);
@@ -61,6 +62,10 @@ function main() {
     performAction();
 
     function onFilesystemActivity(eventType: string, filename: string): void {
+        if (!isEnabled) {
+            return;
+        }
+
         if (matchesAny(filename, ignorePatterns)) {
             console.log(INFO_TEXT(`Ignoring filesystem activity for ${filename}.`));
             return;
@@ -69,12 +74,23 @@ function main() {
     }
 
     function onKeypress(str: string, key: Key) {
-        console.log(INFO_TEXT("Key pressed."));
         // Allow ctrl+c to exit the process.
+        if (!key.ctrl && !key.meta && key.name === "p") {
+            isEnabled = !isEnabled;
+            const msg = isEnabled ? "unpaused" : "paused";
+            console.log(INFO_TEXT(msg));
+            return;
+        }
         if (key.ctrl && key.name === "c") {
             process.exit();
+            return;
         }
-        trigger();
+
+        if (isEnabled) {
+            console.log(INFO_TEXT("Key pressed."));
+            trigger();
+        }
+
     }
 
     function trigger() {
@@ -91,23 +107,26 @@ function main() {
     function performAction() {
         console.log(START_TEXT(SEP));
         const startTimestamp = new Date().toLocaleString("en-US");
+        const commandStr = `"${cmd} ${args.join(" ")}"`;
         console.log(START_TEXT(startTimestamp));
-        console.log(START_TEXT(`Executing command: "${cmd} ${args.join(" ")}"`));
+        console.log(START_TEXT(`Executing command ${commandStr}`));
         console.log(START_TEXT(SEP));
         spawnResult = spawn(cmd, args, undefined, undefined, process.stdout, process.stderr);
 
         BBPromise.resolve(spawnResult.closePromise)
         .then(() => {
-            const msg = "✓ Successfully completed command\n" +
-                `  started: ${startTimestamp}\n`  +
-                `  command: ${cmd} ${args.join(" ")}`;
+            const endTimestamp = new Date().toLocaleString("en-US");
+            const msg = `✓ Success: ${commandStr}\n` +
+                        `  started:  ${startTimestamp}\n`  +
+                        `  finished: ${endTimestamp}`;
             console.log(SUCCESS_TEXT(msg));
         })
         .catch(() => {
             // This is here so we don't get unhandled rejection messages.
-            const msg = "✗ Command failed\n" +
-                        `  started: ${startTimestamp}\n`  +
-                        `  command: ${cmd} ${args.join(" ")}`;
+            const endTimestamp = new Date().toLocaleString("en-US");
+            const msg = `✗ Failed: ${commandStr}\n` +
+                        `  started:  ${startTimestamp}\n`  +
+                        `  finished: ${endTimestamp}`;
             console.log(FAIL_TEXT(msg));
         })
         .finally(() => {
