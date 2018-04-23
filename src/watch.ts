@@ -90,18 +90,25 @@ function main() {
 
     function performAction() {
         console.log(START_TEXT(SEP));
-        console.log(START_TEXT(new Date().toLocaleString("en-US")));
+        const startTimestamp = new Date().toLocaleString("en-US");
+        console.log(START_TEXT(startTimestamp));
         console.log(START_TEXT(`Executing command: "${cmd} ${args.join(" ")}"`));
         console.log(START_TEXT(SEP));
         spawnResult = spawn(cmd, args, undefined, undefined, process.stdout, process.stderr);
 
         BBPromise.resolve(spawnResult.closePromise)
         .then(() => {
-            console.log(SUCCESS_TEXT(`✓ Successfully completed command: "${cmd} ${args.join(" ")}"`));
+            const msg = "✓ Successfully completed command\n" +
+                `  started: ${startTimestamp}\n`  +
+                `  command: ${cmd} ${args.join(" ")}`;
+            console.log(SUCCESS_TEXT(msg));
         })
         .catch(() => {
             // This is here so we don't get unhandled rejection messages.
-            console.log(FAIL_TEXT(`✗ Command failed: "${cmd} ${args.join(" ")}"`));
+            const msg = "✗ Command failed\n" +
+                        `  started: ${startTimestamp}\n`  +
+                        `  command: ${cmd} ${args.join(" ")}`;
+            console.log(FAIL_TEXT(msg));
         })
         .finally(() => {
             console.log("");
