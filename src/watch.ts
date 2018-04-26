@@ -39,9 +39,16 @@ function main() {
     const argv = getArgs();
     const subject = argv._[0];
     const [cmd, ...args] = _.split(argv._[1], /\s+/);
-    argv["ignore"] = _.isArray(argv["ignore"]) ? argv["ignore"] : [argv["ignore"]];
-    console.log(argv["ignore"]);
+
+    if (argv.ignore === undefined) {
+    }
+    else if (_.isArray(argv.ignore)) {
+    }
+    else {
+        argv.ignore = [argv.ignore];
+    }
     const ignorePatterns: Array<RegExp> = _.map(argv["ignore"], (curStr) => new RegExp(curStr));
+
 
     console.log(`Watching ${subject}...`);
     const watcher = new ListenerTracker(watch(subject, {recursive: true}));
@@ -70,6 +77,9 @@ function main() {
             console.log(INFO_TEXT(`Ignoring filesystem activity for ${filename}.`));
             return;
         }
+
+        const msg = `File modified: ${filename}`;
+        console.log(INFO_TEXT(msg));
         trigger();
     }
 
