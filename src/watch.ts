@@ -1,10 +1,14 @@
 #!/usr/bin/env ts-node
+
 import {watch} from "fs";
 import {emitKeypressEvents, Key} from "readline";
 import * as BBPromise from "bluebird";
 import * as _ from "lodash";
 import chalk from "chalk";
+import * as yargs from "yargs";
 import {ListenerTracker, spawn, ISpawnResult} from "asynchrony";
+import {Directory, File} from "oofs";
+
 
 const DEBOUNCE_DELAY = 1500;
 const SEP = "================================================================================";
@@ -14,13 +18,37 @@ const INFO_TEXT    = chalk.black.bgRgb(153, 153, 153);
 const SUCCESS_TEXT = chalk.green.bold;
 const FAIL_TEXT    = chalk.red.bold;
 
-import * as yargs from "yargs";
 
-function getArgs(): yargs.Arguments
+/**
+ * Configuration options for this script.
+ */
+interface IWatchConfig
 {
-    return yargs
+    cmd: string;
+    cmdArgs: Array<string>;
+    watchDirs: Array<Directory>;
+    ignoreRegexes: Array<RegExp>;
+}
+
+
+/**
+ * Parses the command line and gathers the options into an easily consumable
+ * form.
+ * @return The configuration parameters for this script
+ */
+function getConfiguration(): IWatchConfig
+{
+    const argv = yargs
     .usage("Watches a directory.")
     .help()
+    .option("watch",
+        {
+            demandOption: false,
+            type: "string",
+            default: ".",
+            describe: "specify a directory to watch."
+        }
+    )
     .option("ignore",
         {
             demandOption: false,
@@ -29,61 +57,120 @@ function getArgs(): yargs.Arguments
     )
     .wrap(80)
     .argv;
-}
 
-function matchesAny(str: string, patterns: Array<RegExp>) {
-    return _.some(patterns, (curPattern) => curPattern.test(str));
-}
+    //
+    // Get the command from the command line arguments.
+    //
+    const [cmd, ...cmdArgs] = _.split(argv._[0], /\s+/);
 
-function main() {
-    const argv = getArgs();
-    const subject = argv._[0];
-    const [cmd, ...args] = _.split(argv._[1], /\s+/);
-
-    if (argv.ignore === undefined) {
+    //
+    // Figure out which directories to watch.
+    //
+    if (!_.isArray(argv.watch)) {
+        argv.watch = [argv.watch];
     }
-    else if (_.isArray(argv.ignore)) {
+    if (argv.watch.length === 0) {
+        argv.watch = ["."];
     }
-    else {
+
+    // Convert the watched directory strings into Directory objects.
+    const watchDirs = _.map(argv.watch, (curDir) => new Directory(curDir));
+
+    // If any of the watched directories do not exist, exit.
+    _.forEach(watchDirs, (curWatchDir) => {
+        if (!curWatchDir.existsSync()) {
+            console.error(`The directory "${curWatchDir}" does not exist.`);
+            process.exit(-1);
+        }
+    });
+
+    //
+    // Setup the ignore regular expressions.
+    //
+    if (argv.ignore && !_.isArray(argv.ignore)) {
         argv.ignore = [argv.ignore];
     }
-    const ignorePatterns: Array<RegExp> = _.map(argv["ignore"], (curStr) => new RegExp(curStr));
+    const ignoreRegexes: Array<RegExp> = _.map(argv.ignore, (curStr) => new RegExp(curStr));
+
+    return {
+        cmd:           cmd,
+        cmdArgs:       cmdArgs,
+        watchDirs:     watchDirs,
+        ignoreRegexes: ignoreRegexes
+    };
+}
 
 
-    console.log(`Watching ${subject}...`);
-    const watcher = new ListenerTracker(watch(subject, {recursive: true}));
+/**
+ * The main routine for this script.
+ */
+function main(): void {
+    const config: IWatchConfig = getConfiguration();
+    console.log(`watching:  ${config.watchDirs.join(", ")}`);
+    console.log("ignoring:  " + (config.ignoreRegexes.join(", ") || "nothing"));
+    console.log(`command:   ${config.cmd} ${config.cmdArgs.join(" ")}`);
+
+    //
+    // Start watching the directories.
+    //
+    const watchListenerTracker = _.map(config.watchDirs, (curWatchDir) => {
+        const tracker = new ListenerTracker(watch(curWatchDir.toString(), {recursive: true}));
+        tracker.on("change", (eventType: string, filename: string): void => {
+            // When this event is fired, filename is relative to the directory
+            // being watched.  Since onFilesystemActivity() is being used to
+            // watch *all* of the watched directories, the path must be
+            // prepended to eliminate possible ambiguity.
+            onFilesystemActivity(eventType, new File(curWatchDir, filename));
+        });
+        return tracker;
+    });
+
     let isEnabled = true;
     let timerId: NodeJS.Timer | undefined = undefined;
     let spawnResult: ISpawnResult | undefined = undefined;
-    watcher.on("change", onFilesystemActivity);
 
-    // Like filesystem events, keypress events can also trigger this watcher.
+    //
+    // Setup keypresses so that they too can trigger the command.
+    //
     emitKeypressEvents(process.stdin);
     if (process.stdin.isTTY && process.stdin.setRawMode) {
         process.stdin.setRawMode(true);
         process.stdin.on("keypress", onKeypress);
     }
 
-
+    //
     // Perform the action once just to get started.
+    //
     performAction();
 
-    function onFilesystemActivity(eventType: string, filename: string): void {
+
+    /**
+     * Handler for filesystem change events
+     * @param eventType - string
+     * @param eventType - The type of change that has occurred
+     * @param file - The file that changed
+     */
+    function onFilesystemActivity(eventType: string, file: File): void {
         if (!isEnabled) {
             return;
         }
 
-        if (matchesAny(filename, ignorePatterns)) {
-            console.log(INFO_TEXT(`Ignoring filesystem activity for ${filename}.`));
+        if (matchesAny(file.toString(), config.ignoreRegexes)) {
+            console.log(INFO_TEXT(`Ignoring filesystem activity for ${file.toString()}.`));
             return;
         }
 
-        const msg = `File modified: ${filename}`;
-        console.log(INFO_TEXT(msg));
+        console.log(INFO_TEXT(`File modified: ${file}`));
         trigger();
     }
 
-    function onKeypress(str: string, key: Key) {
+
+    /**
+     * Handler for keypress events from stdin
+     * @param str -
+     * @param key - Information about the key that was pressed
+     */
+    function onKeypress(str: string, key: Key): void {
         // Allow ctrl+c to exit the process.
         if (!key.ctrl && !key.meta && key.name === "p") {
             isEnabled = !isEnabled;
@@ -91,7 +178,9 @@ function main() {
             console.log(INFO_TEXT(msg));
             return;
         }
+
         if (key.ctrl && key.name === "c") {
+            _.forEach(watchListenerTracker, (curWatcher) => curWatcher.removeAll());
             process.exit();
             return;
         }
@@ -100,10 +189,15 @@ function main() {
             console.log(INFO_TEXT("Key pressed."));
             trigger();
         }
-
     }
 
-    function trigger() {
+
+    /**
+     * Helper function that should be called whenever an event happes that
+     * should trigger the command to run.  This function takes care of killing
+     * any in-progress commands and debouncing triggers.
+     */
+    function trigger(): void {
         if (spawnResult) {
             console.log(STOP_TEXT("----- Killing current child process. -----"));
             spawnResult.childProcess.kill();
@@ -114,14 +208,18 @@ function main() {
         timerId = setTimeout(performAction, DEBOUNCE_DELAY);
     }
 
-    function performAction() {
+
+    /**
+     * Executes the command line provided by the user
+     */
+    function performAction(): void {
         console.log(START_TEXT(SEP));
         const startTimestamp = new Date().toLocaleString("en-US");
-        const commandStr = `"${cmd} ${args.join(" ")}"`;
+        const commandStr = `"${config.cmd} ${config.cmdArgs.join(" ")}"`;
         console.log(START_TEXT(startTimestamp));
         console.log(START_TEXT(`Executing command ${commandStr}`));
         console.log(START_TEXT(SEP));
-        spawnResult = spawn(cmd, args, undefined, undefined, process.stdout, process.stderr);
+        spawnResult = spawn(config.cmd, config.cmdArgs, undefined, undefined, process.stdout, process.stderr);
 
         BBPromise.resolve(spawnResult.closePromise)
         .then(() => {
@@ -147,3 +245,18 @@ function main() {
 }
 
 main();
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper Functions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Tests to see if any patterns match str
+ * @param str - The string to test
+ * @param patterns - The regular expressions to test against
+ * @return true if one or more patterns match str
+ */
+function matchesAny(str: string, patterns: Array<RegExp>): boolean {
+    return _.some(patterns, (curPattern) => curPattern.test(str));
+}
