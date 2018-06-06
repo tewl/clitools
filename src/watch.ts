@@ -126,8 +126,8 @@ function main(): void {
     });
 
     let isEnabled = true;
-    let timerId: NodeJS.Timer | undefined = undefined;
-    let spawnResult: ISpawnResult | undefined = undefined;
+    let timerId: NodeJS.Timer | undefined;
+    let spawnResult: ISpawnResult | undefined;
 
     //
     // Setup keypresses so that they too can trigger the command.
