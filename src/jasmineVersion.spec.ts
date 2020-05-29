@@ -7,7 +7,7 @@ describe("jasmine", () => {
 
 
     it("version will be printed while running the unit tests", () => {
-        expect(getJasmineVersion()).toBe("2.99.0");
+        expect(getJasmineVersion()).toBe("2.8.0");
     });
 
 

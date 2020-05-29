@@ -37,7 +37,7 @@ function main(): void
         "LgxExport_AllProjDocTrans",        // = 4194304,
         "LgxExport_Reserved1",              // = 8388608,
         "LgxExport_LogicalHierarchy",       // = 16777216,
-        "LgxExport_NoCustomProperties",     // = 33554432
+        "LgxExport_NoCustomProperties"      // = 33554432
     ];
 
     const setBitsExpression = GetSetBitsExpression(valueToExplain, flags);

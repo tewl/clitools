@@ -1,14 +1,15 @@
-#!/usr/bin/env ts-node
-
 import {watch} from "fs";
+import * as cp from "child_process";
 import {emitKeypressEvents, Key} from "readline";
 import * as BBPromise from "bluebird";
 import * as _ from "lodash";
 import chalk from "chalk";
 import * as yargs from "yargs";
-import {ListenerTracker, spawn, ISpawnResult} from "asynchrony";
-import {Directory, File} from "oofs";
-
+import {Directory} from "./depot/directory";
+import {File} from "./depot/file";
+import {ListenerTracker} from "./depot/listenerTracker";
+import {spawn, ISpawnResult} from "./depot/spawn";
+import {getOs, OperatingSystem} from "./depot/os";
 
 const DEBOUNCE_DELAY = 1500;
 const SEP = "================================================================================";
@@ -193,7 +194,7 @@ function main(): void {
 
 
     /**
-     * Helper function that should be called whenever an event happes that
+     * Helper function that should be called whenever an event happens that
      * should trigger the command to run.  This function takes care of killing
      * any in-progress commands and debouncing triggers.
      */
@@ -219,7 +220,12 @@ function main(): void {
         console.log(START_TEXT(startTimestamp));
         console.log(START_TEXT(`Executing command ${commandStr}`));
         console.log(START_TEXT(SEP));
-        spawnResult = spawn(config.cmd, config.cmdArgs, undefined, undefined, process.stdout, process.stderr);
+
+        let spawnOptions: cp.SpawnOptions | undefined;
+        if (getOs() === OperatingSystem.WINDOWS) {
+            spawnOptions = {shell: true};
+        }
+        spawnResult = spawn(config.cmd, config.cmdArgs, spawnOptions, undefined, process.stdout, process.stderr);
 
         BBPromise.resolve(spawnResult.closePromise)
         .then(() => {
