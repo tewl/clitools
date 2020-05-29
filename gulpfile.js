@@ -2,6 +2,7 @@ const path = require("path");
 // Allow use of TS files.
 require('ts-node').register({project: path.join(__dirname, "tsconfig.json")});
 const fs = require("fs");
+const os = require("os");
 const gulp = require("gulp");
 const del = require("del");
 const _ = require("lodash");
@@ -9,6 +10,7 @@ const spawn = require("./dev/depot/spawn").spawn;
 const Deferred = require("./dev/depot/deferred").Deferred;
 const toGulpError = require("./dev/depot/gulpHelpers").toGulpError;
 const nodeBinForOs = require("./dev/depot/nodeUtil").nodeBinForOs;
+const indent = require("./dev/depot/stringHelpers").indent;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Default
@@ -153,6 +155,12 @@ gulp.task("build", () => {
         firstError = firstError || err;
     })
     .then(() => {
+        return makeExecutable();
+    })
+    .catch((err) => {
+        firstError = firstError || err;
+    })
+    .then(() => {
         if (firstError) {
             throw toGulpError(firstError, "One or more build tasks failed.");
         }
@@ -205,6 +213,19 @@ function compileTypeScript() {
     .catch((err) => {
         console.error(_.trim(err.stdout + err.stderr));
         throw toGulpError(new Error("TypeScript compilation failed."));
+    });
+}
+
+
+function makeExecutable() {
+
+    const { Directory } = require("./dev/depot/directory");
+    const { makeAllJsScriptsExecutable } = require("./dev/depot/nodeUtil");
+
+    return makeAllJsScriptsExecutable(new Directory(".", "dist"), false)
+    .then((scriptFiles) => {
+        console.log("Made scripts executable:");
+        console.log(indent(scriptFiles.join(os.EOL), 4));
     });
 }
 
