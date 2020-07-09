@@ -8,6 +8,12 @@ import {getOs, OperatingSystem} from "./os";
 
 const NODEJS_SHEBANG = "#!/usr/bin/env node";
 
+/**
+ * Makes the specified script file executable by prepending a shebang line and
+ * setting file permissions.
+ * @param file - The file to make executable
+ * @return A promise that resolves with the file that was made executable
+ */
 export function makeNodeScriptExecutable(file: File): Promise<File>
 {
     return file.read()
@@ -32,6 +38,13 @@ export function makeNodeScriptExecutable(file: File): Promise<File>
 }
 
 
+/**
+ * Makes all .js files in the specified directory executable.
+ * @param dir - The directory containing the .js files
+ * @param recursive - Whether to search `dir` recursively for .js files
+ * @return A promise that resolves with an array of files that were made
+ * executable.
+ */
 export function makeAllJsScriptsExecutable(dir: Directory, recursive: boolean = false): Promise<Array<File>>
 {
     return dir.contents(recursive)
