@@ -180,7 +180,7 @@ gulp.task("compile", () => {
     return clean()
     .then(() => {
         // Do not build if there are TSLint errors.
-        return runTslint(true, sourceGlobs);
+        return runTslint(true);
     })
     .then(() => {
         // Everything seems ok.  Go ahead and compile.
