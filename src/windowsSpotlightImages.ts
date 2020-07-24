@@ -24,7 +24,7 @@ if (require.main === module)
 
 async function windowsSpotlightImagesMain(): Promise<number>
 {
-    console.log(`argv: ${process.argv[2]}`);
+    console.log(`Output directory: ${process.argv[2]}`);
 
     const outDirStr = process.argv[2];
     const outDir = new Directory(outDirStr);
@@ -45,5 +45,7 @@ async function windowsSpotlightImagesMain(): Promise<number>
     });
 
     await Promise.all(promises);
+
+    console.log(`Copied ${promises.length} files.`);
     return 0;
 }
