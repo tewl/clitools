@@ -1,10 +1,12 @@
+import * as path from "path";
 import * as _ from "lodash";
 import * as BBPromise from "bluebird";
 import {Directory} from "./depot/directory";
 import { File } from "./depot/file";
 import {matchesAny} from "./depot/regexpHelpers";
 import {promptToContinue} from "./depot/prompts";
-import {Result, successResult, failureResult} from "./depot/result";
+import {Result, successResult, failureResult, isSuccess, isFailure, ISuccessResult} from "./depot/result";
+import {DiffDirFileItem} from "./depot/diffDirectories";
 
 
 // tslint:disable: max-classes-per-file
@@ -292,23 +294,46 @@ async function movePhotosMain(): Promise<number>
     const destDir = new Directory("\\\\floyd\\photo");
     console.log(`srcDir: ${srcDir}\ndestDir: ${destDir}`);
 
-    const contents = await srcDir.contents(true);
+    const srcFiles = (await srcDir.contents(true)).files;
 
     //
     // Delete unwanted source files.
     //
     console.log("Searching for unwanted files...");
     const unwanted = _.remove(
-        contents.files,
+        srcFiles,
         (curSrcFile) => matchesAny(curSrcFile.toString(), [/Thumbs\.db$/i, /\.DS_Store$/i])
     );
 
     console.log(`There are ${unwanted.length} unwanted files.`);
     for (const curUnwanted of unwanted) {
         const keepGoing = await promptToContinue(`Delete ${curUnwanted.toString()}`, true, true);
+        if (keepGoing)
+        {
+            await curUnwanted.delete();
+        }
     }
 
-    // TODO: Delete source files that are exactly the same in the destination.
+    //
+    // Delete source files that are exactly the same in the destination.
+    //
+    const diffDirFileItems = _.map(
+        srcFiles,
+        (curSrcFile) => DiffDirFileItem.create(srcDir, destDir, path.relative(srcDir.toString(), curSrcFile.toString()))
+    );
+
+    for (const curDiffDirFileItem of diffDirFileItems) {
+        if (await curDiffDirFileItem.bothExistAndIdentical()) {
+            const keepGoing = promptToContinue(
+                `Identical version of ${curDiffDirFileItem.leftFile!.toString()} exists in destination. Delete it?`,
+                true,
+                true
+            );
+            if (keepGoing) {
+                await curDiffDirFileItem.leftFile!.delete();
+            }
+        }
+    }
 
     // LEFT OFF HERE:
     // I need to create strategy objects that accept a file and return a date along with a confidence level:
