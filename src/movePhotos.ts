@@ -289,38 +289,26 @@ if (require.main === module)
 async function movePhotosMain(): Promise<number>
 {
     const srcDir = new Directory("\\\\floyd\\chandratmp");
-    console.log(`srcDir: ${srcDir}`);
-
     const destDir = new Directory("\\\\floyd\\photo");
-    console.log(`destDir: ${destDir}`);
-
+    console.log(`srcDir: ${srcDir}\ndestDir: ${destDir}`);
 
     const contents = await srcDir.contents(true);
 
     //
     // Delete unwanted source files.
     //
-
-    const sourceFilesToDelete = [
-        /Thumbs\.db$/i,
-        /\.DS_Store$/i
-    ];
-
-    // TODO: Delete source files that are exactly the same in the destination.
-
     console.log("Searching for unwanted files...");
     const unwanted = _.remove(
         contents.files,
-        (curSrcFile) => matchesAny(curSrcFile.toString(), sourceFilesToDelete)
+        (curSrcFile) => matchesAny(curSrcFile.toString(), [/Thumbs\.db$/i, /\.DS_Store$/i])
     );
 
-    //
-    // Delete unwanted files.
-    //
     console.log(`There are ${unwanted.length} unwanted files.`);
     for (const curUnwanted of unwanted) {
         const keepGoing = await promptToContinue(`Delete ${curUnwanted.toString()}`, true, true);
     }
+
+    // TODO: Delete source files that are exactly the same in the destination.
 
     // LEFT OFF HERE:
     // I need to create strategy objects that accept a file and return a date along with a confidence level:
