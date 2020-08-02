@@ -6,7 +6,8 @@ import { File } from "./depot/file";
 import {matchesAny} from "./depot/regexpHelpers";
 import {promptToContinue} from "./depot/prompts";
 import {Result, successResult, failureResult, isSuccess, isFailure, ISuccessResult} from "./depot/result";
-import {DiffDirFileItem} from "./depot/diffDirectories";
+import {FileComparer} from "./depot/diffDirectories";
+import {removeAsync} from "./depot/promiseHelpers";
 
 
 // tslint:disable: max-classes-per-file
@@ -294,7 +295,9 @@ async function movePhotosMain(): Promise<number>
     const destDir = new Directory("\\\\floyd\\photo");
     console.log(`srcDir: ${srcDir}\ndestDir: ${destDir}`);
 
+    console.log(`Finding all files in ${srcDir.toString()}...`);
     const srcFiles = (await srcDir.contents(true)).files;
+    console.log(`Source files found: ${srcFiles.length}`);
 
     //
     // Delete unwanted source files.
@@ -314,35 +317,40 @@ async function movePhotosMain(): Promise<number>
         }
     }
 
+    const fileComparers = _.map(srcFiles, (curSrcFile) => {
+        return FileComparer.create(curSrcFile, new File(destDir, path.relative(srcDir.toString(), curSrcFile.toString())));
+    });
+
     //
     // Delete source files that are exactly the same in the destination.
     //
-    const diffDirFileItems = _.map(
-        srcFiles,
-        (curSrcFile) => DiffDirFileItem.create(srcDir, destDir, path.relative(srcDir.toString(), curSrcFile.toString()))
-    );
 
-    for (const curDiffDirFileItem of diffDirFileItems) {
-        if (await curDiffDirFileItem.bothExistAndIdentical()) {
-            const keepGoing = promptToContinue(
-                `Identical version of ${curDiffDirFileItem.leftFile!.toString()} exists in destination. Delete it?`,
-                true,
-                true
-            );
-            if (keepGoing) {
-                await curDiffDirFileItem.leftFile!.delete();
-            }
+    // LEFT OFF HERE: The following code that attempts to remove identical files
+    // is having no effect, because the files' path is not the same in the
+    // source and destination.  These paths are set above when the FileComparers
+    // are instantiated.  What I need is a function that takes a file and an
+    // array of IFileDatestampStrategy objects and gives back the path where
+    // that file would be found in `destDir`.
+    const identicals = await removeAsync(fileComparers, (fc) => fc.bothExistAndIdentical());
+    console.log(`There are ${identicals.length} identical files.`);
+    for (const curIdentical of identicals) {
+        const doDeletion = await promptToContinue(`${curIdentical.leftFile.toString()} is identical.  Delete?`, true, true);
+        if (doDeletion) {
+            // TODO: Uncomment this code when we're sure it works.
+            // await curIdentical.leftFile.delete();
+            console.log("Fake deletion here.");
         }
     }
 
-    // LEFT OFF HERE:
-    // I need to create strategy objects that accept a file and return a date along with a confidence level:
-    // - Using EXIF data from the photo
-    // - Using a date in the file's path
-    //   - Do reality checks. For example, month cannot be > 12.
-    //   - DS File uses the format IMG_20181110_142609
-    // - Using dates from other files in the same folder.
-    //   - Especially useful for video files.
+    // TODO: Keep writing this code until all files in srcDir are accounted for.
+    // Some additional ideas for strategies that I may need:
+    // - Using EXIF data from photo (high confidence level in resulting date)
+    // - Using date in the file's path (already implemented)
+    // - Using dates of other files in the same folder.
+    //    - Especially useful for video files.
+
+    // TODO: Do an additional copy of files from chandra, because I think I may
+    // have accidentally deleted a few in \\floyd\chandratmp.
 
     return 0;
 }
