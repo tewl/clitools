@@ -7,7 +7,7 @@ import {matchesAny} from "./depot/regexpHelpers";
 import {promptToContinue} from "./depot/prompts";
 import {Result, successResult, failureResult, isSuccess, isFailure, ISuccessResult} from "./depot/result";
 import {FileComparer} from "./depot/diffDirectories";
-import {removeAsync} from "./depot/promiseHelpers";
+import {removeAsync, mapAsync} from "./depot/promiseHelpers";
 
 
 // tslint:disable: max-classes-per-file
@@ -61,11 +61,6 @@ class DatestampDeductionAggregate
     // #endregion
 
 
-    public constructor()
-    {
-    }
-
-
     public get deductions(): ReadonlyArray<DatestampDeduction>
     {
         return this._deductions;
@@ -78,39 +73,26 @@ class DatestampDeductionAggregate
     }
 
 
+    public hasSuccessfulDeductions(): boolean
+    {
+        const hasSuccessfulDeductions = _.some(this._deductions, isSuccesfulDatestampDeduction);
+        return hasSuccessfulDeductions;
+    }
+
+
     public getSuccessfulDeductions(): Array<IDatestampDeductionSuccess>
     {
-        const successfulDeductions = _.reduce<DatestampDeduction, Array<IDatestampDeductionSuccess>>(
-            this._deductions,
-            (acc, curDeduction) =>
-            {
-                if (isSuccesfulDatestampDeduction(curDeduction))
-                {
-                    acc.push(curDeduction);
-                }
-                return acc;
-            },
-            []
-        );
+        const successfulDeductions = _.filter(this._deductions, isSuccesfulDatestampDeduction);
         return successfulDeductions;
     }
 
     public getFailedDeductionExplanations(): Array<string>
     {
-        const failedDeductions = _.reduce<DatestampDeduction, Array<IDatestampDeductionFailure>>(
-            this._deductions,
-            (acc, curDeduction) =>
-            {
-                if (isFailureDatestampDeduction(curDeduction))
-                {
-                    acc.push(curDeduction);
-                }
-                return acc;
-            },
-            []
-        );
-
-        return _.map(failedDeductions, (curFailedDeduction) => curFailedDeduction.explanation);
+        const explanations = _.chain(this._deductions)
+        .filter(isFailureDatestampDeduction)
+        .map((curFailedDeduction) => curFailedDeduction.explanation)
+        .value();
+        return explanations;
     }
 
 
@@ -126,6 +108,25 @@ class DatestampDeductionAggregate
         return allAreEqual;
     }
 
+    public getHighestConfidenceDeductions(): Array<IDatestampDeductionSuccess>
+    {
+        const successfulDeductions = this.getSuccessfulDeductions();
+        if (successfulDeductions.length === 0) {
+            return [];
+        }
+
+        const confidenceGroups = _.groupBy(successfulDeductions, (curDeduction) => curDeduction.confidence);
+
+        const highestConfidenceLevelFound = _.find(
+            [ConfidenceLevel.HIGH, ConfidenceLevel.MEDIUM, ConfidenceLevel.LOW],
+            (curConfidenceLevel) => {
+                const deductions = confidenceGroups[curConfidenceLevel];
+                return deductions && deductions.length > 0;
+            }
+        )!;
+
+        return confidenceGroups[highestConfidenceLevelFound];
+    }
 }
 
 
@@ -183,16 +184,17 @@ function FileDatestampStrategyFilePath(source: File): Promise<DatestampDeduction
 }
 
 
-async function ApplyFileDatestampStrategies(source: File, strategies: Array<IFileDatestampStrategy>): Promise<DatestampDeductionAggregate>
+async function ApplyFileDatestampStrategies(
+    source: File,
+    strategies: Array<IFileDatestampStrategy>
+): Promise<DatestampDeductionAggregate>
 {
-    const promises = _.map(strategies, (curStrategy) => curStrategy(source));
-    const allResults = await BBPromise.all(promises);
+    const allDeductions = await mapAsync(strategies, (curStrategy) => curStrategy(source));
 
     const aggregateDeduction = new DatestampDeductionAggregate();
-    for (const curResult of allResults) {
+    for (const curResult of allDeductions) {
         aggregateDeduction.push(curResult);
     }
-
     return aggregateDeduction;
 }
 
