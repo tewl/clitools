@@ -2,7 +2,8 @@ import * as os from "os";
 import * as _ from "lodash";
 import {Directory} from "./depot/directory";
 import { File } from "./depot/file";
-import {mapAsync, filterAsync} from "./depot/promiseHelpers";
+import {mapAsync, filterAsync, getTimerPromise, removeAsync} from "./depot/promiseHelpers";
+import {FileComparer} from "./depot/diffDirectories";
 
 
 if (require.main === module)
@@ -25,14 +26,16 @@ if (require.main === module)
 
 async function windowsSpotlightImagesMain(): Promise<number>
 {
-    console.log(`Output directory: ${process.argv[2]}`);
-
     const outDirStr = process.argv[2];
     const outDir = new Directory(outDirStr);
-    if (!outDir.existsSync())
+    if (outDir.existsSync())
     {
-        console.error(`ERROR: The output directory "${outDirStr}" does not exist.`);
-        return Promise.resolve(-1);
+        console.log(`Using existing output directory '${outDir.toString()}'`);
+    }
+    else
+    {
+        outDir.ensureExistsSync();
+        console.log(`Created output directory '${outDir.toString()}'.`);
     }
 
     const spotlightAssetsDir = new Directory(os.homedir(), "AppData", "Local", "Packages",
@@ -48,11 +51,23 @@ async function windowsSpotlightImagesMain(): Promise<number>
         return stats.size > 200 * 1024;
     });
 
-    const destFiles = await mapAsync(assetFiles, (curFile) => {
-        const dstFile = new File(outDir, curFile.baseName + ".jpg");
-        return curFile.copy(dstFile);
+    const fileComparers = _.map(assetFiles, (curSrcFile) => {
+        const destFile = new File(outDir, curSrcFile.baseName + ".jpg");
+        return FileComparer.create(curSrcFile, destFile);
     });
 
-    console.log(`Copied ${destFiles.length} files.`);
+    const removed = await removeAsync(fileComparers, async (curFileComparer) => {
+        const areIdentical = await curFileComparer.bothExistAndIdentical();
+        return areIdentical;
+    });
+
+    console.log(`Identical files: ${removed.length}`);
+    console.log(`New files:       ${fileComparers.length}`);
+
+    const destFiles = await mapAsync(fileComparers, (curFileComparer) => {
+        return curFileComparer.leftFile.copy(curFileComparer.rightFile);
+    });
+
+    await getTimerPromise(5 * 1000, true);
     return 0;
 }
