@@ -3,7 +3,7 @@ import * as path from "path";
 import * as _ from "lodash";
 import * as BBPromise from "bluebird";
 import {File} from "./file";
-import {promisify1, sequence} from "./promiseHelpers";
+import {promisify1, sequence, mapAsync} from "./promiseHelpers";
 import {PathPart, reducePathParts} from "./pathHelpers";
 
 
@@ -403,7 +403,7 @@ export class Directory
 
             const contents: IDirectoryContents = {subdirs: [], files: []};
 
-            const promises = fsEntryPaths.map((curPath) => {
+            return mapAsync(fsEntryPaths, (curPath) => {
                 return lstatAsync(curPath)
                 .then((stats) => {
                     if (stats.isFile()) {
@@ -413,9 +413,7 @@ export class Directory
                     }
                     // Note: We are ignoring symbolic links here.
                 });
-            });
-
-            return BBPromise.all(promises)
+            })
             .then(() => {
                 return contents;
             });
@@ -490,7 +488,7 @@ export class Directory
     {
         return this.contents()
         .then((contents) => {
-            const promises = contents.subdirs.map((curSubdir) => {
+            return mapAsync(contents.subdirs, (curSubdir) => {
                 //
                 // Prune the current subdirectory.
                 //
@@ -506,9 +504,7 @@ export class Directory
                         return curSubdir.delete();
                     }
                 });
-            });
-
-            return BBPromise.all(promises)
+            })
             .then(() => {
             });
         });
@@ -537,15 +533,15 @@ export class Directory
 
 
     /**
-     * Copies this directory to destDir.
+     * Copies this directory to `destDir`.
      * @param destDir - The destination directory
      * @param copyRoot - If true, this directory name will be a subdirectory of
-     * destDir.  If false, only the contents of this directory will be copied
-     * into destDir.
+     * `destDir`.  If false, only the contents of this directory will be copied
+     * into `destDir`.
      * @return A promise that is resolved with a Directory object representing
-     * the destination directory.  If copyRoot is false, this will be destDir.
+     * the destination directory.  If copyRoot is false, this will be `destDir`.
      * If copyRoot is true, this will be this Directory's counterpart
-     * subdirectory in destDir.
+     * subdirectory in `destDir`.
      */
     public copy(destDir: Directory, copyRoot: boolean): Promise<Directory>
     {
@@ -585,11 +581,11 @@ export class Directory
 
 
     /**
-     * Copies this directory to destDir.
+     * Copies this directory to `destDir`.
      * @param destDir - The destination directory
      * @param copyRoot - If true, this directory name will be a subdirectory of
-     * destDir.  If false, only the contents of this directory will be copied
-     * into destDir.
+     * `destDir`.  If false, only the contents of this directory will be copied
+     * into `destDir`.
      */
     public copySync(destDir: Directory, copyRoot: boolean): Directory
     {
@@ -621,15 +617,15 @@ export class Directory
 
 
     /**
-     * Moves this Directory or the contents of this Directory to destDir.
+     * Moves this Directory or the contents of this Directory to `destDir`.
      * @param destDir - The destination directory
      * @param moveRoot - If true, this directory name will be a subdirectory of
-     * destDir.  If false, only the contents of this directory will be copied
-     * into destDir.
+     * `destDir`.  If false, only the contents of this directory will be copied
+     * into `destDir`.
      * @return A promise that is resolved with a Directory object representing
-     * the destination directory.  If moveRoot is false, this will be destDir.
+     * the destination directory.  If moveRoot is false, this will be `destDir`.
      * If moveRoot is true, this will be this Directory's counterpart
-     * subdirectory in destDir.
+     * subdirectory in `destDir`.
      */
     public move(destDir: Directory, moveRoot: boolean): Promise<Directory>
     {

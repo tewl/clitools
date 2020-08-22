@@ -1,16 +1,36 @@
 const path = require("path");
 // Allow use of TS files.
 require('ts-node').register({project: path.join(__dirname, "tsconfig.json")});
-const fs = require("fs");
-const os = require("os");
 const gulp = require("gulp");
 const del = require("del");
 const _ = require("lodash");
-const spawn = require("./dev/depot/spawn").spawn;
-const Deferred = require("./dev/depot/deferred").Deferred;
-const toGulpError = require("./dev/depot/gulpHelpers").toGulpError;
-const nodeBinForOs = require("./dev/depot/nodeUtil").nodeBinForOs;
-const indent = require("./dev/depot/stringHelpers").indent;
+const { spawn } = require("./dev/depot/spawn");
+const { Deferred } = require("./dev/depot/deferred");
+const { toGulpError } = require("./dev/depot/gulpHelpers");
+const { nodeBinForOs } = require("./dev/depot/nodeUtil");
+const { mapAsync } = require("./dev/depot/promiseHelpers");
+const { File } = require("./dev/depot/file");
+const { Directory } = require("./dev/depot/directory");
+const { makeNodeScriptExecutable } = require("./dev/depot/nodeUtil");
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Project Configuration
+////////////////////////////////////////////////////////////////////////////////
+
+const OUT_DIR = new Directory(".", "dist");
+
+//
+// The executable scripts build by this project.
+// These scripts will be made executable.
+//
+const BUILT_SCRIPTS = [
+    "binflagsToStrings.js",
+    "watch.js",
+    "windowsSpotlightImages.js",
+    path.join("movePhotos", "movePhotos.js")
+];
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Default
@@ -217,15 +237,13 @@ function compileTypeScript() {
 }
 
 
-function makeExecutable() {
+function makeExecutable()
+{
+    const scriptFiles = _.map(BUILT_SCRIPTS, (curScript) => new File(OUT_DIR, curScript));
 
-    const { Directory } = require("./dev/depot/directory");
-    const { makeAllJsScriptsExecutable } = require("./dev/depot/nodeUtil");
-
-    return makeAllJsScriptsExecutable(new Directory(".", "dist"), false)
-    .then((scriptFiles) => {
-        console.log("Made scripts executable:");
-        console.log(indent(scriptFiles.join(os.EOL), 4));
+    return mapAsync(scriptFiles, (curScriptFile) => {
+        console.log(`Making executable:  ${curScriptFile.toString()}`);
+        return makeNodeScriptExecutable(curScriptFile);
     });
 }
 
