@@ -7,7 +7,8 @@ import {matchesAny} from "./depot/regexpHelpers";
 import {promptToContinue} from "./depot/prompts";
 import {Result, successResult, failureResult, isSuccess, isFailure, ISuccessResult} from "./depot/result";
 import {FileComparer} from "./depot/diffDirectories";
-import {removeAsync, mapAsync} from "./depot/promiseHelpers";
+import {removeAsync, mapAsync, zipWithAsyncValues} from "./depot/promiseHelpers";
+import {padLeft} from "./depot/stringHelpers";
 
 
 // tslint:disable: max-classes-per-file
@@ -31,6 +32,7 @@ interface IDatestampDeductionSuccess
     readonly confidence:  ConfidenceLevel;
     readonly datestamp:   Datestamp;
     readonly explanation: string;
+    readonly destFile:    File;
 }
 
 
@@ -105,7 +107,7 @@ class DatestampDeductionAggregate
 
         const firstDatestamp: Datestamp = successfulDeductions[0].datestamp!;
         const allAreEqual = _.every(successfulDeductions, (curDeduction) => curDeduction.datestamp.equals(firstDatestamp));
-        return allAreEqual;
+        return !allAreEqual;
     }
 
     public getHighestConfidenceDeductions(): Array<IDatestampDeductionSuccess>
@@ -130,8 +132,6 @@ class DatestampDeductionAggregate
 }
 
 
-
-
 interface IFileDatestampStrategy
 {
     /**
@@ -141,7 +141,7 @@ interface IFileDatestampStrategy
      * @return A promise that always resolves with a deduction result
      * (indicating success or failure).
      */
-    (source: File): Promise<DatestampDeduction>;
+    (source: File, destDir: Directory): Promise<DatestampDeduction>;
 }
 
 
@@ -151,10 +151,10 @@ interface IFileDatestampStrategy
 // }
 
 
-const dateRegex = /(?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))/;
+// const dateRegex = /\/(?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))/;
+const datedFolderRegex = /[/\\](?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))(?<desc>.*?)?[/\\]/
 
-
-function FileDatestampStrategyFilePath(source: File): Promise<DatestampDeduction>
+function fileDatestampStrategyFilePath(source: File, destDir: Directory): Promise<DatestampDeduction>
 {
     const absPath = source.absPath();
 
@@ -176,15 +176,18 @@ function FileDatestampStrategyFilePath(source: File): Promise<DatestampDeduction
         throw new Error(`Failed to instantiate Datestamp: ${datestampResult.message}`);
     }
 
+    const datestamp = datestampResult.value;
+
     return BBPromise.resolve({
         confidence:  ConfidenceLevel.MEDIUM,
         datestamp:   datestampResult.value,
-        explanation: `The file path '${absPath}' contains the date '${dateStr}'.`
+        explanation: `The file path '${absPath}' contains the date '${dateStr}'.`,
+        destFile:    new File(destDir, datestamp.year.toString(), )
     });
 }
 
 
-async function ApplyFileDatestampStrategies(
+async function applyFileDatestampStrategies(
     source: File,
     strategies: Array<IFileDatestampStrategy>
 ): Promise<DatestampDeductionAggregate>
@@ -264,11 +267,26 @@ class Datestamp
     }
 
 
+    public get year(): number
+    {
+        return this._year;
+    }
+
+
     public equals(other: Datestamp): boolean
     {
         return this._year  === other._year &&
                this._month === other._month &&
                this._day   === other._day;
+    }
+
+    public toString(): string
+    {
+        const yearStr = padLeft(this._year.toString(), "0", 4);
+        const monthStr = padLeft(this._month.toString(), "0", 2);
+        const dayStr = padLeft(this._day.toString(), "0", 2);
+
+        return `${yearStr}_${monthStr}_${dayStr}`;
     }
 }
 
@@ -310,14 +328,36 @@ async function movePhotosMain(): Promise<number>
         (curSrcFile) => matchesAny(curSrcFile.toString(), [/Thumbs\.db$/i, /\.DS_Store$/i])
     );
 
-    console.log(`There are ${unwanted.length} unwanted files.`);
-    for (const curUnwanted of unwanted) {
-        const keepGoing = await promptToContinue(`Delete ${curUnwanted.toString()}`, true, true);
-        if (keepGoing)
+    console.log(`Unwanted files: ${unwanted.length}`);
+    if (unwanted.length > 0) {
+        _.forEach(unwanted, (curUnwanted) => console.log(`  ${curUnwanted.toString()}`));
+        await promptToContinue(`Delete ${unwanted.length} unwanted files?`, true, true)
+        .then(() =>
         {
-            await curUnwanted.delete();
-        }
+            return mapAsync(unwanted, async (curUnwanted) => curUnwanted.delete());
+        })
+        .catch(() => { });
     }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    const strategies = [fileDatestampStrategyFilePath];
+
+    const srcAndDeductionAggregates = await zipWithAsyncValues(srcFiles, async (curSrcFile) => {
+        return applyFileDatestampStrategies(curSrcFile, strategies);
+    });
+
+    const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) => {
+        const highestConfidenceDeductions = curSrcAndDeductionAggregate[1].getHighestConfidenceDeductions();
+        return highestConfidenceDeductions.length > 0 &&
+               !curSrcAndDeductionAggregate[1].isConflicted() &&
+               highestConfidenceDeductions[0].confidence >= ConfidenceLevel.MEDIUM;
+    });
+
+    console.log(`There are ${highConfidence.length} high confidence files.`);
+    console.log(`There are ${srcAndDeductionAggregates.length} files still unaccounted for.`);
+    process.exit(-1);
+
+    ////////////////////////////////////////////////////////////////////////////////
 
     const fileComparers = _.map(srcFiles, (curSrcFile) => {
         return FileComparer.create(curSrcFile, new File(destDir, path.relative(srcDir.toString(), curSrcFile.toString())));
