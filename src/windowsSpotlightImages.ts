@@ -1,3 +1,19 @@
+////////////////////////////////////////////////////////////////////////////////
+//
+// Usage: node.exe windowsSpotlightImages.js <path\to\output\directory>
+//
+// It is recommended that you use the %USERPROFILE% environment variable to
+// specify an output directory within your user directory.
+//
+// Example:
+// node.exe %USERPROFILE%\dev\path\to\windowsSpotlightImages.js %USERPROFILE%\blah\blah\Windows_Spotlight
+//
+// Note:  If this script is run using Windows Task Scheduler, that task will
+// have to be updated whenever your password changes.
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
 import * as os from "os";
 import * as _ from "lodash";
 import {Directory} from "./depot/directory";
