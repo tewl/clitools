@@ -23,8 +23,7 @@ interface IDatestampStrategy
 // TODO: Implement an _exif_ strategy.
 
 
-const dateRegex = /\/(?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))/;
-const datedFolderRegex = /[/\\](?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))(?<desc>.*?)?[/\\]/;
+const dateRegex = /(?<date>(?<year>(20|19)\d\d)([-_])?(?<month>[01]\d)([-_])?(?<day>[0123]\d))/;
 
 
 export function datestampStrategyFilePath(source: File, destDir: Directory): Promise<DatestampDeduction>
@@ -57,7 +56,7 @@ export function datestampStrategyFilePath(source: File, destDir: Directory): Pro
         confidence: ConfidenceLevel.MEDIUM,
         datestamp: datestampResult.value,
         explanation: `The file path '${absPath}' contains the date '${dateStr}'.`,
-        destFile: new File(destDir, datestamp.year.toString(),)
+        destFile: new File(destDir, datestamp.year.toString(), datestamp.toString(), source.fileName)
     });
 }
 

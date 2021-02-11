@@ -1,18 +1,15 @@
 import * as path from "path";
 import * as _ from "lodash";
 import {Directory} from "../depot/directory";
-import { File } from "../depot/file";
+import {File} from "../depot/file";
 import {matchesAny} from "../depot/regexpHelpers";
 import {promptToContinue} from "../depot/prompts";
 import {FileComparer} from "../depot/diffDirectories";
 import {removeAsync, mapAsync, zipWithAsyncValues} from "../depot/promiseHelpers";
-import { datestampStrategyFilePath, applyDatestampStrategies } from "./datestampStrategy";
+import {datestampStrategyFilePath, applyDatestampStrategies} from "./datestampStrategy";
 import {ConfidenceLevel} from "./datestampDeduction";
 
 
-////////////////////////////////////////////////////////////////////////////////
-// Bootstrap
-////////////////////////////////////////////////////////////////////////////////
 
 if (require.main === module)
 {
@@ -34,35 +31,28 @@ async function movePhotosMain(): Promise<number>
     console.log(`srcDir: ${srcDir}\ndestDir: ${destDir}`);
 
     console.log(`Finding all files in ${srcDir.toString()}...`);
-    const srcFiles = (await srcDir.contents(true)).files;
+    let srcFiles = (await srcDir.contents(true)).files;
     console.log(`Source files found: ${srcFiles.length}`);
 
     //
-    // Delete unwanted source files.
+    // Delete unwanted source files
     //
-    console.log("Searching for unwanted files...");
-    const unwanted = _.remove(
-        srcFiles,
-        (curSrcFile) => matchesAny(curSrcFile.toString(), [/Thumbs\.db$/i, /\.DS_Store$/i])
-    );
+    srcFiles = await deleteUnwantedSourceFiles(srcFiles);
 
-    console.log(`Unwanted files: ${unwanted.length}`);
-    if (unwanted.length > 0) {
-        _.forEach(unwanted, (curUnwanted) => console.log(`  ${curUnwanted.toString()}`));
-        await promptToContinue(`Delete ${unwanted.length} unwanted files?`, true, true)
-        .then(() =>
-        {
-            return mapAsync(unwanted, async (curUnwanted) => curUnwanted.delete());
-        })
-        .catch(() => { });
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
+    //
+    // From this point on, we will need the deductions that result from applying
+    // the various datestamp strategies.
+    //
     const strategies = [datestampStrategyFilePath];
-
-    const srcAndDeductionAggregates = await zipWithAsyncValues(srcFiles, async (curSrcFile) => {
+    const srcAndDeductionAggregates = await zipWithAsyncValues(srcFiles, async (curSrcFile) =>
+    {
         return applyDatestampStrategies(curSrcFile, destDir, strategies);
     });
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+
 
     const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) => {
         const highestConfidenceDeductions = curSrcAndDeductionAggregate[1].getHighestConfidenceDeductions();
@@ -113,4 +103,60 @@ async function movePhotosMain(): Promise<number>
     // have accidentally deleted a few in _\\floyd\chandratmp_.
 
     return 0;
+}
+
+
+/**
+ * Prompts the user whether they wish to delete unwanted files from `srcFiles`.
+ * @param srcFiles - The source files to be processed.
+ * @return A new array containing only the wanted files.
+ */
+async function deleteUnwantedSourceFiles(srcFiles: Array<File>): Promise<Array<File>>
+{
+    const unwantedPatterns = [
+        /Thumbs\.db$/i,
+        /\.DS_Store$/i
+    ];
+
+    console.log("Searching for unwanted files...");
+    const [unwantedFiles, wantedFiles] = _.partition(srcFiles, (srcFile) => matchesAny(srcFile.toString(), unwantedPatterns));
+
+    await promptAndDeleteFiles(unwantedFiles, "Delete unwanted files?");
+    return wantedFiles;
+}
+
+
+/**
+ * Prompts the user whether they wish to delete the specified files.
+ * @param files - The files that may be deleted.
+ * @param prompt - The prompt that will be displayed.  If confirmed, the
+ * specified files will be deleted.
+ * @return A promise that resolves to true when the user confirms the file
+ * deletions.  A promise that resolves to false when the user cancels.
+ */
+async function promptAndDeleteFiles(files: Array<File>, prompt: string): Promise<boolean>
+{
+    if (files.length === 0)
+    {
+        return true;
+    }
+
+    // Print the files to be deleted.
+    _.forEach(files, (curFile) => console.log(`  ${curFile.toString()}`));
+
+    const enhancedPrompt = `${prompt} (${files.length} files)`;
+
+    // Ask the user if they wish to delete the files.
+    try
+    {
+        await promptToContinue(enhancedPrompt, true, true);
+
+    } catch (error)
+    {
+        // The user did not confirm the deletion.  Do nothing.
+        return false;
+    }
+
+    await mapAsync(files, async (curFile) => curFile.delete());
+    return true;
 }
