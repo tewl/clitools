@@ -250,17 +250,28 @@ export async function build(): Promise<void>
 }
 
 
+/**
+ * Configures the scripts this project builds so that they can be easily
+ * executed.
+ * @return A promise that resolves when all operations have completed.
+ */
 function makeExecutable(): Promise<void>
 {
     const scriptFiles = _.map(BUILT_SCRIPTS, (curScript) => new File(distDir, curScript));
 
+    //
+    // Insert a shebang line into each script and turn on the executable
+    // permission on each script file. 
+    //
     const makeExecutablePromises = mapAsync(scriptFiles, (curJsScriptFile) => {
         console.log(`Making executable:  ${curJsScriptFile.toString()}`);
         return makeNodeScriptExecutable(curJsScriptFile);
     });
 
+    //
     // If running on Windows, create .cmd files that will launch the executable
     // scripts.
+    //
     let createCmdPromises: Promise<void> = Promise.resolve();
     if (getOs() === OperatingSystem.Windows) {
         createCmdPromises = mapAsync(scriptFiles, (curJsScriptFile) => {
