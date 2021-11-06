@@ -7,21 +7,18 @@ A set of useful command line interface tools
 This project contains utility command line interface tools.  To setup a PC so
 that you can execute them from any directory, do the following.
 
-1. Install dependencies and build.
-
-   Note:  On Windows, this will also create `.cmd` files for each executable
-   script.  This will allow you to enter just the script's name (without the
-   extension).
+1. Install dependencies.
 
    ```powershell
    npm install
-   gulp build
    ```
 
-2. Run the npm script, to copy the build files into the `dist-saved` directory.
+2. Build and copy the output to the `dist-saved` directory.  This directory
+   serves as a stable location for the last known good (i.e. published) version
+   of these tools.
 
    ```powershell
-   gulp updateDistSaved
+   gulp build && gulp updateDistSaved
    ```
 
 3. Add the `dist-saved\src` folder to the path environment variable:
