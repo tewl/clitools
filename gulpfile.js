@@ -25,7 +25,6 @@ const OUT_DIR = new Directory(".", "dist");
 // These scripts will be made executable.
 //
 const BUILT_SCRIPTS = [
-    "binflagsToStrings.js",
     "watch.js",
     "windowsSpotlightImages.js",
     path.join("movePhotos", "movePhotos.js")
