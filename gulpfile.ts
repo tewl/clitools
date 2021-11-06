@@ -9,6 +9,7 @@ import { File } from "./dev/depot/file";
 import { getOs, OperatingSystem } from "./dev/depot/os";
 import { spawn, SpawnError, spawnErrorToString } from "./dev/depot/spawn2";
 import { failed, failedResult, Result, succeeded, succeededResult } from "./dev/depot/result";
+import { hr } from "./dev/depot/ttyHelpers";
 import * as promiseResult from "./dev/depot/promiseResult";
 import { mapAsync } from "./dev/depot/promiseHelpers";
 
@@ -24,14 +25,14 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // The executable scripts build by this project.
 // These scripts will be made executable.
 //
-const BUILT_SCRIPTS = [
+const scripts: Array<string> = [
     path.join("src", "hr.js"),
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
     path.join("src", "movePhotos", "movePhotos.js")
 ];
 
-const sep = "--------------------------------------------------------------------------------";
+const sep = hr("-");
 
 const successStyle = chalk.green.bold;
 const failStyle    = chalk.red.bold;
@@ -257,7 +258,7 @@ export async function build(): Promise<void>
  */
 function makeExecutable(): Promise<void>
 {
-    const scriptFiles = _.map(BUILT_SCRIPTS, (curScript) => new File(distDir, curScript));
+    const scriptFiles = _.map(scripts, (curScript) => new File(distDir, curScript));
 
     //
     // Insert a shebang line into each script and turn on the executable
