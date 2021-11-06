@@ -287,3 +287,25 @@ function makeExecutable(): Promise<void>
     return Promise.all([ makeExecutablePromises, createCmdPromises])
     .then(() => {});
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+// updateDistSaved
+////////////////////////////////////////////////////////////////////////////////
+
+export async function updateDistSaved(): Promise<void>
+{
+    const distSrcDir = new Directory(distDir, "src");
+    const distSavedDir = new Directory("dist-saved");
+
+    //
+    // Clear out the current dist-saved directory.
+    //
+    distSavedDir.emptySync();
+
+    //
+    // Copy the part of the dist folder that is needed to run scripts.
+    //
+    distSrcDir.copySync(distSavedDir, true);
+
+}
