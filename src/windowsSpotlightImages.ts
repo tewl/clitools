@@ -54,8 +54,14 @@ async function windowsSpotlightImagesMain(): Promise<number>
         console.log(`Created output directory '${outDir.toString()}'.`);
     }
 
-    const spotlightAssetsDir = new Directory(os.homedir(), "AppData", "Local", "Packages",
-        "Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy", "LocalState", "Assets"
+    const spotlightAssetsDir = new Directory(
+        os.homedir(),
+        "AppData",
+        "Local",
+        "Packages",
+        "Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy",
+        "LocalState",
+        "Assets"
     );
 
     let assetFiles = spotlightAssetsDir.contentsSync(false).files;
@@ -80,7 +86,7 @@ async function windowsSpotlightImagesMain(): Promise<number>
     console.log(`Identical files: ${removed.length}`);
     console.log(`New files:       ${fileComparers.length}`);
 
-    const destFiles = await mapAsync(fileComparers, (curFileComparer) => {
+    const __destFiles = await mapAsync(fileComparers, (curFileComparer) => {
         return curFileComparer.leftFile.copy(curFileComparer.rightFile);
     });
 

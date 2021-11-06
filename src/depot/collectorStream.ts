@@ -6,7 +6,7 @@ export class CollectorStream extends Transform
 {
     // region Private Members
     private _collected: Buffer;
-    private _flushedDeferred: Deferred<void>;
+    private readonly _flushedDeferred: Deferred<void>;
     // endregion
 
 
@@ -18,7 +18,7 @@ export class CollectorStream extends Transform
     }
 
 
-    public _transform(chunk: Buffer | string, encoding: string, done: () => any): void
+    public override _transform(chunk: Buffer | string, encoding: string, done: () => unknown): void
     {
         // Convert to a Buffer.
         const chunkBuf: Buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
@@ -29,7 +29,7 @@ export class CollectorStream extends Transform
     }
 
 
-    public _flush(done: () => any): void
+    public override _flush(done: () => unknown): void
     {
         this._flushedDeferred.resolve(undefined);
         done();

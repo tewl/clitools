@@ -7,7 +7,7 @@ describe("jasmine", () => {
 
 
     it("version will be printed while running the unit tests", () => {
-        expect(getJasmineVersion()).toBe("2.8.0");
+        expect(getJasmineVersion()).toBe("3.10.1");
     });
 
 
@@ -15,5 +15,6 @@ describe("jasmine", () => {
 
 
 function getJasmineVersion(): string {
-    return (jasmine as any).version || jasmine.getEnv().versionString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (jasmine as any).version || (jasmine.getEnv() as any).versionString();
 }

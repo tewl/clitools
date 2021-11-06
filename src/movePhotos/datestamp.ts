@@ -1,4 +1,4 @@
-import {Result, successResult, failureResult} from "../depot/result";
+import {Result, succeededResult, failedResult} from "../depot/result";
 import {padLeft} from "../depot/stringHelpers";
 
 
@@ -15,7 +15,7 @@ export class Datestamp
      * @return A result object that will yield the new Datestamp instance or a
      * failure describing why it could not be created.
      */
-    public static fromStrings(yearStr: string, monthStr: string, dayStr: string): Result<Datestamp, void>
+    public static fromStrings(yearStr: string, monthStr: string, dayStr: string): Result<Datestamp, string>
     {
         const year = parseInt(yearStr, 10);
         const month = parseInt(monthStr, 10);
@@ -23,17 +23,17 @@ export class Datestamp
 
         if (Number.isNaN(year))
         {
-            return failureResult(undefined, `${yearStr} is not a valid year string.`);
+            return failedResult(`${yearStr} is not a valid year string.`);
         }
 
         if (Number.isNaN(month))
         {
-            return failureResult(undefined, `${monthStr} is not a valid year string.`);
+            return failedResult(`${monthStr} is not a valid year string.`);
         }
 
         if (Number.isNaN(day))
         {
-            return failureResult(undefined, `${dayStr} is not a valid year string.`);
+            return failedResult(`${dayStr} is not a valid year string.`);
         }
 
         //
@@ -43,27 +43,27 @@ export class Datestamp
         const curYear = now.getFullYear();
         if (year < curYear - 100 || year > curYear)
         {
-            return failureResult(undefined, `${year} is not a valid year.`);
+            return failedResult(`${year} is not a valid year.`);
         }
 
         if (month < 1 || month > 12)
         {
-            return failureResult(undefined, `${month} is not a valid month.`);
+            return failedResult(`${month} is not a valid month.`);
         }
 
         if (day < 1 || day > 31)
         {
-            return failureResult(undefined, `${day} is not a valid day.`);
+            return failedResult(`${day} is not a valid day.`);
         }
 
-        return successResult(new Datestamp(year, month, day));
+        return succeededResult(new Datestamp(year, month, day));
     }
 
 
     // #region Instance Data Members
-    private _year: number;
-    private _month: number;
-    private _day: number;
+    private readonly _year: number;
+    private readonly _month: number;
+    private readonly _day: number;
     // #endregion
 
 

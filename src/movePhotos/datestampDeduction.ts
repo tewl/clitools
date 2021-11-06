@@ -3,10 +3,10 @@ import {Datestamp} from "./datestamp";
 
 export enum ConfidenceLevel
 {
-    HIGH = 10,
-    MEDIUM = 6,
-    LOW = 3,
-    NO_CLUE = 0
+    High = 10,
+    Medium = 6,
+    Low = 3,
+    NoClue = 0
 }
 
 
@@ -21,7 +21,7 @@ export interface IDatestampDeductionSuccess
 
 export interface IDatestampDeductionFailure
 {
-    readonly confidence: ConfidenceLevel.NO_CLUE;
+    readonly confidence: ConfidenceLevel.NoClue;
     readonly explanation: string;
 }
 
@@ -32,11 +32,11 @@ export type DatestampDeduction = IDatestampDeductionFailure | IDatestampDeductio
 
 export function isSuccesfulDatestampDeduction(deduction: DatestampDeduction): deduction is IDatestampDeductionSuccess
 {
-    return deduction.confidence !== ConfidenceLevel.NO_CLUE;
+    return deduction.confidence !== ConfidenceLevel.NoClue;
 }
 
 
 export function isFailureDatestampDeduction(deduction: DatestampDeduction): deduction is IDatestampDeductionFailure
 {
-    return deduction.confidence === ConfidenceLevel.NO_CLUE;
+    return deduction.confidence === ConfidenceLevel.NoClue;
 }

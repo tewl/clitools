@@ -1,9 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import * as BBPromise from "bluebird";
+import * as _ from "lodash";
 import {ListenerTracker} from "./listenerTracker";
-import {promisify1} from "./promiseHelpers";
+import {promisify1} from "./promisify";
 import {Directory} from "./directory";
 import {PathPart, reducePathParts} from "./pathHelpers";
 
@@ -122,8 +122,8 @@ export class File
      */
     public exists(): Promise<fs.Stats | undefined>
     {
-        return new BBPromise<fs.Stats | undefined>((resolve: (result: fs.Stats | undefined) => void) => {
-            fs.stat(this._filePath, (err: any, stats: fs.Stats) => {
+        return new Promise<fs.Stats | undefined>((resolve: (result: fs.Stats | undefined) => void) => {
+            fs.stat(this._filePath, (err: unknown, stats: fs.Stats) => {
 
                 if (!err && stats.isFile())
                 {
@@ -146,7 +146,7 @@ export class File
             return stats.isFile() ? stats : undefined;
         }
         catch (err) {
-            if (err.code === "ENOENT")
+            if ((err as NodeJS.ErrnoException).code === "ENOENT")
             {
                 return undefined;
             }
@@ -159,6 +159,34 @@ export class File
 
 
     /**
+     * Gets the other files in the same directory as this file.
+     * @return A promise that resolves with an array of sibling files.  This
+     * promise will reject if this file does not exist.  The relative/absolute
+     * nature of the returned files' path will match that of this file.
+     */
+    public getSiblingFiles(): Promise<Array<File>>
+    {
+        return this.exists()
+        .then((stats) => {
+            if (stats === undefined) {
+                throw new Error(`Cannot get sibling files for non existent file ${this.absPath}`);
+            }
+
+            const parentDir = this.directory;
+            return parentDir.contents(false);
+        })
+        .then((dirContents) => {
+
+            const thisFileName = this.fileName;
+
+            const allFiles = dirContents.files;
+            const siblingFiles = _.filter(allFiles, (curFile) => curFile.fileName !== thisFileName);
+            return siblingFiles;
+        });
+    }
+
+
+    /**
      * Sets the access mode bits for this file
      * @param mode - Numeric value representing the new access modes.  See
      * fs.constants.S_I*.
@@ -166,7 +194,7 @@ export class File
      */
     public chmod(mode: number): Promise<File>
     {
-        return new BBPromise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             fs.chmod(this._filePath, mode, (err) => {
                 if (err) {
                     reject(err);
@@ -185,7 +213,8 @@ export class File
      * fs.constants.S_I*.
      * @return A promise for this file (for easy chaining)
      */
-    public chmodSync(mode: number): void {
+    public chmodSync(mode: number): void
+    {
         fs.chmodSync(this._filePath, mode);
     }
 
@@ -207,7 +236,7 @@ export class File
         return this.exists()
         .then((stats) => {
             if (!stats) {
-                return BBPromise.resolve();
+                return Promise.resolve();
             } else {
                 return unlinkAsync(this._filePath);
             }
@@ -490,7 +519,7 @@ export class File
     {
         return this.directory.ensureExists()
         .then(() => {
-            return new BBPromise<void>((resolve, reject) => {
+            return new Promise<void>((resolve, reject) => {
                 fs.writeFile(this._filePath, text, "utf8", (err) => {
                     if (err) {
                         reject(err);
@@ -521,7 +550,9 @@ export class File
      * @param data - The data to be stringified and written
      * @return A Promise that is resolved when the file has been written
      */
-    public writeJson(data: object): Promise<void>
+    public writeJson(
+        data: object  // eslint-disable-line @typescript-eslint/ban-types
+    ): Promise<void>
     {
         const jsonText = JSON.stringify(data, undefined, 4);
         return this.write(jsonText);
@@ -533,7 +564,9 @@ export class File
      * parent directories do not exist, they are created.
      * @param data - The data to be stringified and written
      */
-    public writeJsonSync(data: object): void
+    public writeJsonSync(
+        data: object  // eslint-disable-line @typescript-eslint/ban-types
+    ): void
     {
         const jsonText = JSON.stringify(data, undefined, 4);
         return this.writeSync(jsonText);
@@ -547,16 +580,16 @@ export class File
      * `openssl list-message-digest-algorithms`.
      * @return A Promise for a hexadecimal string containing the hash
      */
-    public getHash(algorithm: string = "md5"): Promise<string>
+    public getHash(algorithm = "md5"): Promise<string>
     {
-        return new BBPromise<string>((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
             const input = fs.createReadStream(this._filePath);
             const hash = crypto.createHash(algorithm);
             hash.setEncoding("hex");
 
             input
-            .on("error", (error: any) => {
-                reject(new Error(error));
+            .on("error", (error: Error) => {
+                reject(error);
             })
             .on("end", () => {
                 hash.end();
@@ -577,7 +610,8 @@ export class File
      * `openssl list-message-digest-algorithms`.
      * @return A hexadecimal string containing the hash
      */
-    public getHashSync(algorithm: string = "md5"): string {
+    public getHashSync(algorithm = "md5"): string
+    {
         const fileData = fs.readFileSync(this._filePath);
         const hash = crypto.createHash(algorithm);
         hash.update(fileData);
@@ -592,7 +626,7 @@ export class File
      */
     public read(): Promise<string>
     {
-        return new BBPromise<string>((resolve: (text: string) => void, reject: (err: any) => void) => {
+        return new Promise<string>((resolve: (text: string) => void, reject: (err: unknown) => void) => {
             fs.readFile(this._filePath, {encoding: "utf8"}, (err, data) => {
                 if (err)
                 {
@@ -666,7 +700,7 @@ function copyFile(sourceFilePath: string, destFilePath: string, options?: ICopyO
     // streams can read and write smaller chunks of the data.
     //
 
-    return new BBPromise<void>((resolve: () => void, reject: (err: any) => void) => {
+    return new Promise<void>((resolve: () => void, reject: (err: unknown) => void) => {
 
         const readStream = fs.createReadStream(sourceFilePath);
         const readListenerTracker = new ListenerTracker(readStream);
@@ -695,7 +729,7 @@ function copyFile(sourceFilePath: string, destFilePath: string, options?: ICopyO
         readStream.pipe(writeStream);
     })
     .then(() => {
-        if (options && options.preserveTimestamps)
+        if (options?.preserveTimestamps)
         {
             //
             // The caller wants to preserve the source file's timestamps.  Copy
@@ -709,7 +743,7 @@ function copyFile(sourceFilePath: string, destFilePath: string, options?: ICopyO
                 // by 1000 below and truncation happens, we are actually setting
                 // dest's timestamps *before* those of of source.
                 //
-                return new BBPromise<void>((resolve, reject) => {
+                return new Promise<void>((resolve, reject) => {
                     fs.utimes(destFilePath, srcStats.atime.valueOf() / 1000, srcStats.mtime.valueOf() / 1000, (err) => {
                         if (err) {
                             reject(err);
@@ -720,6 +754,8 @@ function copyFile(sourceFilePath: string, destFilePath: string, options?: ICopyO
                 });
             });
         }
+
+        return;
     });
 }
 
@@ -735,7 +771,7 @@ function copyFileSync(sourceFilePath: string, destFilePath: string, options?: IC
     const data: Buffer = fs.readFileSync(sourceFilePath);
     fs.writeFileSync(destFilePath, data);
 
-    if (options && options.preserveTimestamps)
+    if (options?.preserveTimestamps)
     {
         const srcStats = fs.statSync(sourceFilePath);
         fs.utimesSync(destFilePath, srcStats.atime.valueOf() / 1000, srcStats.mtime.valueOf() / 1000);

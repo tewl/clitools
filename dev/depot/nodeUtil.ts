@@ -1,7 +1,6 @@
 import {constants} from "fs";
 import {EOL} from "os";
 import * as _ from "lodash";
-import * as BBPromise from "bluebird";
 import {Directory} from "./directory";
 import {File} from "./file";
 import {getOs, OperatingSystem} from "./os";
@@ -47,7 +46,7 @@ export function makeNodeScriptExecutable(file: File): Promise<File>
  * @return A promise that resolves with an array of files that were made
  * executable.
  */
-export function makeAllJsScriptsExecutable(dir: Directory, recursive: boolean = false): Promise<Array<File>>
+export function makeAllJsScriptsExecutable(dir: Directory, recursive = false): Promise<Array<File>>
 {
     return dir.contents(recursive)
     .then((contents) => {
@@ -72,7 +71,7 @@ export function nodeBinForOs(nodeBinFile: File | string): File
 {
     const inputFile: File = nodeBinFile instanceof File ? nodeBinFile : new File(nodeBinFile);
 
-    if (getOs() === OperatingSystem.WINDOWS)
+    if (getOs() === OperatingSystem.Windows)
     {
         return new File(inputFile.directory, inputFile.baseName + ".cmd");
     }
@@ -82,3 +81,39 @@ export function nodeBinForOs(nodeBinFile: File | string): File
     }
 }
 
+
+/**
+ * Creates a Windows .cmd file that will launch the specified .js file using
+ * Node.
+ * @param jsFile - The JavaScript file to be launched by node.exe
+ * @return A File object representing the created .cmd file
+ */
+export function createCmdLaunchScript(jsFile: File): Promise<File>
+{
+    const cmdFileName =  jsFile.baseName + ".cmd";
+    const cmdFile = new File(jsFile.directory, cmdFileName);
+    const cmdContents = getCmdLauncherCode(jsFile);
+    return cmdFile.write(cmdContents)
+    .then(() => {
+        return cmdFile;
+    });
+}
+
+
+/**
+ * Gets the .cmd file code needed to launch the specified .js file using node.
+ * @param jsFile - The .js file that will be run
+ * @return The .cmd file code needed to launch the specified .js file using node
+ */
+function getCmdLauncherCode(jsFile: File): string {
+
+    const cmdCode = `@IF EXIST "%~dp0\\node.exe" (` + EOL +
+                    `    "%~dp0\\node.exe"  "%~dp0\\${jsFile.fileName}" %*` + EOL +
+                    `) ELSE (` + EOL +
+                    `    @SETLOCAL` + EOL +
+                    `    @SET PATHEXT=%PATHEXT:;.JS;=;%` + EOL +
+                    `    node  "%~dp0\\${jsFile.fileName}" %*` + EOL +
+                    `)` + EOL;
+
+    return cmdCode;
+}

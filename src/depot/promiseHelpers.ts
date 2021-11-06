@@ -2,129 +2,13 @@ import {Writable} from "stream";
 import {EventEmitter} from "events";
 import * as _ from "lodash";
 import {ListenerTracker} from "./listenerTracker";
-import * as BBPromise from "bluebird";
-
-
-export type CallBackType<ResultType> = (err: any, result?: ResultType) => void;
-
-
-/**
- * Adapts a Node-style async function with any number of arguments and a callback to a
- * function that has the same arguments (minus the callback) and returns a Promise.
- * @param func - The Node-style function that takes arguments followed by a
- * Node-style callback.
- * @return A function that takes the arguments and returns a Promise for the result.
- */
-export function promisifyN<ResultType>(
-    func: (...args: Array<any>) => void
-): (...args: Array<any>) => Promise<ResultType> {
-
-    const promisifiedFunc = function (...args: Array<any>): Promise<ResultType> {
-
-        return new BBPromise<ResultType>((resolve: (result: ResultType) => void, reject: (err: any) => void) => {
-            func.apply(undefined, args.concat((err: any, result: ResultType) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }));
-        });
-    };
-    return promisifiedFunc;
-}
-
-
-/**
- * Adapts a Node-style async function with one parameter and a callback to a
- * function that takes one parameter and returns a Promise.  This function is
- * similar to promisifyN(), except that it retains type safety.
- * @param func - The Node-style function that takes one argument and a
- * Node-style callback.
- * @return A function that takes the one argument and returns a Promise for the
- * result.
- */
-export function promisify1<ResultType, Arg1Type>(
-    func: (arg1: Arg1Type, cb: CallBackType<ResultType> ) => void
-): (arg1: Arg1Type) => Promise<ResultType> {
-
-    const promisifiedFunc = function (arg1: Arg1Type): Promise<ResultType> {
-        return new BBPromise<ResultType>((resolve: (result: ResultType) => void, reject: (err: any) => void) => {
-            func(arg1, (err: any, result?: ResultType) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result!);
-                }
-            });
-        });
-    };
-    return promisifiedFunc;
-
-}
-
-
-/**
- * Adapts a Node-style async function with two parameters and a callback to a function
- * that takes two parameters and returns a Promise.  This function is similar to
- * promisifyN(), except that it retains type safety.
- * @param func - The Node-style function that takes two arguments and a
- * Node-style callback.
- * @return A function that takes the two arguments and returns a Promise for the
- * result.
- */
-export function promisify2<ResultType, Arg1Type, Arg2Type>(
-    func: (arg1: Arg1Type, arg2: Arg2Type, cb: CallBackType<ResultType> ) => void
-): (arg1: Arg1Type, arg2: Arg2Type) => Promise<ResultType> {
-
-    const promisifiedFunc = function (arg1: Arg1Type, arg2: Arg2Type): Promise<ResultType> {
-        return new BBPromise<ResultType>((resolve: (result: ResultType) => void, reject: (err: any) => void) => {
-            func(arg1, arg2, (err: any, result?: ResultType) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result!);
-                }
-            });
-        });
-    };
-    return promisifiedFunc;
-}
-
-
-/**
- * Adapts a Node-style async function with three parameters and a callback to a function
- * that takes three parameters and returns a Promise.  This function is similar to
- * promisifyN(), except that it retains type safety.
- * @param func - The Node-style function that takes three arguments and a
- * Node-style callback.
- * @return A function that takes the three arguments and returns a Promise for the
- * result.
- */
-export function promisify3<ResultType, Arg1Type, Arg2Type, Arg3Type>(
-    func: (arg1: Arg1Type, arg2: Arg2Type, arg3: Arg3Type, cb: CallBackType<ResultType> ) => void
-): (arg1: Arg1Type, arg2: Arg2Type, arg3: Arg3Type) => Promise<ResultType> {
-
-    const promisifiedFunc = function (arg1: Arg1Type, arg2: Arg2Type, arg3: Arg3Type): Promise<ResultType> {
-        return new BBPromise<ResultType>((resolve: (result: ResultType) => void, reject: (err: any) => void) => {
-            func(arg1, arg2, arg3, (err: any, result?: ResultType) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result!);
-                }
-            });
-        });
-    };
-    return promisifiedFunc;
-}
 
 
 /**
  * A task is any operation that can be started (i.e. called) which completes at
  * some point in the future.
  */
-export type Task<ResolveType> = () => Promise<ResolveType>;
+export type Task<TResolve> = () => Promise<TResolve>;
 
 
 /**
@@ -139,38 +23,17 @@ export type Task<ResolveType> = () => Promise<ResolveType>;
  * of the last function.
  */
 export function sequence(
-    tasks: Array<(previousValue: any) => any>,
-    initialValue: any
-): Promise<any> {
+    tasks: Array<(previousValue: unknown) => unknown>,
+    initialValue: unknown
+): Promise<unknown> {
     "use strict";
 
     return tasks.reduce(
         (accumulator, curTask) => {
             return accumulator.then(curTask);
         },
-        BBPromise.resolve(initialValue));
-}
-
-
-/**
- *  Creates a promise that is resolved when all input promises have been
- *  settled (resolved or rejected).  The returned Promise is resolved with an
- *  array of BBPromise.Inspection objects.
- *
- *  This is the commonly accepted way of implementing allSettled() in Bluebird.
- *  See:  http://bluebirdjs.com/docs/api/reflect.html
- *
- * @param promises - The array of input promises.
- * @returns A promise that will be resolved with an inspection object for each
- * input promise.
- */
-export function allSettled(promises: Array<Promise<any>>): Promise<Array<BBPromise.Inspection<any>>>  {
-    "use strict";
-
-    const wrappedPromises: Array<BBPromise.Inspection<any>> = _.map(
-        promises,
-        (curPromise: Promise<any>) => BBPromise.resolve(curPromise).reflect());
-    return BBPromise.all(wrappedPromises);
+        Promise.resolve(initialValue)
+    );
 }
 
 
@@ -184,14 +47,14 @@ export function allSettled(promises: Array<Promise<any>>): Promise<Array<BBPromi
  * @returns A Promise that will be resolved with the specified value
  * after the specified delay
  */
-export function getTimerPromise<ResolveType>(
+export function getTimerPromise<TResolve>(
     ms:            number,
-    resolveValue:  ResolveType
-): Promise<ResolveType> {
+    resolveValue:  TResolve
+): Promise<TResolve> {
     "use strict";
 
-    return new BBPromise(
-        (resolve: (resolveValue: ResolveType) => void) => {
+    return new Promise(
+        (resolve: (resolveValue: TResolve) => void) => {
             setTimeout(
                 () => {
                     resolve(resolveValue);
@@ -214,16 +77,16 @@ export function getTimerPromise<ResolveType>(
  * `task`.  When `condition` is false, a promise that resolves with
  * `falseResolveValue`.
  */
-export function conditionalTask<ResolveType>(
-    condition: any,
-    task: Task<ResolveType>,
-    falseResolveValue: ResolveType
-): Promise<ResolveType> {
+export function conditionalTask<TResolve>(
+    condition: unknown,
+    task: Task<TResolve>,
+    falseResolveValue: TResolve
+): Promise<TResolve> {
     if (condition) {
         return task();
     }
     else {
-        return BBPromise.resolve(falseResolveValue);
+        return Promise.resolve(falseResolveValue);
     }
 }
 
@@ -235,24 +98,24 @@ export function conditionalTask<ResolveType>(
  * @param rejectEventName - The event that will cause the Promise to reject
  * @return A Promise that will will resolve and reject as specified
  */
-export function eventToPromise<ResolveType>(
+export function eventToPromise<TResolve>(
     emitter: EventEmitter,
     resolveEventName: string,
     rejectEventName?: string
-): Promise<ResolveType>
+): Promise<TResolve>
 {
-    return new BBPromise<ResolveType>(
-        (resolve: (result: ResolveType) => void, reject: (err: any) => void) => {
+    return new Promise<TResolve>(
+        (resolve: (result: TResolve) => void, reject: (err: unknown) => void) => {
             const tracker = new ListenerTracker(emitter);
 
-            tracker.once(resolveEventName, (result: ResolveType) => {
+            tracker.once(resolveEventName, (result: TResolve) => {
                 tracker.removeAll();
                 resolve(result);
             });
 
             if (rejectEventName)
             {
-                tracker.once(rejectEventName, (err: any) => {
+                tracker.once(rejectEventName, (err: unknown) => {
                     tracker.removeAll();
                     reject(err);
                 });
@@ -291,10 +154,10 @@ export function streamToPromise(stream: Writable): Promise<void> {
  * invocations.  If the Promise returned by the last invocation of theFunc
  * rejects, the returned Promise will be rejected with the same value.
  */
-export function retry<ResolveType>(
-    theFunc:         () => Promise<ResolveType>,
+export function retry<TResolve>(
+    theFunc:         () => Promise<TResolve>,
     maxNumAttempts:  number
-): Promise<ResolveType> {
+): Promise<TResolve> {
     "use strict";
     return retryWhileImpl(theFunc, () => true, maxNumAttempts, 0);
 }
@@ -323,11 +186,11 @@ export function retry<ResolveType>(
  * invocations.  If the Promise returned by the last invocation of theFunc
  * rejects, the returned Promise will be rejected with the same value.
  */
-export function retryWhile<ResolveType>(
-    theFunc: () => Promise<ResolveType>,
-    whilePredicate: (err: any) => boolean,
+export function retryWhile<TResolve>(
+    theFunc: () => Promise<TResolve>,
+    whilePredicate: (err: unknown) => boolean,
     maxNumAttempts: number
-): Promise<ResolveType> {
+): Promise<TResolve> {
     "use strict";
     return retryWhileImpl(theFunc, whilePredicate, maxNumAttempts, 0);
 }
@@ -336,7 +199,7 @@ export function retryWhile<ResolveType>(
  * The value that will be multiplied by successively higher powers of 2 when
  * calculating delay time during exponential back off.
  */
-const BACKOFF_MULTIPLIER: number = 20;
+const BACKOFF_MULTIPLIER = 20;
 
 
 /**
@@ -348,25 +211,25 @@ const BACKOFF_MULTIPLIER: number = 20;
  * @param attemptsSoFar - Number of theFunc invocations so far
  * @returns The Promise returned to the client
  */
-function retryWhileImpl<ResolveType>(
-    theFunc:         () => Promise<ResolveType>,
-    whilePredicate:  (err: any) => boolean,
+function retryWhileImpl<TResolve>(
+    theFunc:         () => Promise<TResolve>,
+    whilePredicate:  (err: unknown) => boolean,
     maxNumAttempts:  number,
     attemptsSoFar:   number
-): Promise<ResolveType> {
+): Promise<TResolve> {
     "use strict";
-    return new BBPromise(
-        (resolve: (value: ResolveType|Promise<ResolveType>) => void, reject: (err: any) => void) => {
+    return new Promise(
+        (resolve: (value: TResolve|Promise<TResolve>) => void, reject: (err: unknown) => void) => {
 
             ++attemptsSoFar;
             theFunc()
             .then(
-                (value: ResolveType) => {
+                (value: TResolve) => {
                     // The current iteration resolved.  Return the value to the client
                     // immediately.
                     resolve(value);
                 },
-                (err: any): void => {
+                (err: unknown): void => {
                     // The promise was rejected.
                     if (attemptsSoFar >= maxNumAttempts) {
                         // logger.error("Retry operation failed after " + maxNumAttempts + " attempts.");
@@ -416,7 +279,7 @@ function retryWhileImpl<ResolveType>(
 export function promiseWhile(predicate: () => boolean, body: Task<void>): Promise<void> {
     "use strict";
 
-    return new BBPromise<void>((resolve: () => void, reject: () => void) => {
+    return new Promise<void>((resolve: () => void, reject: () => void) => {
 
         function loop(): void {
             if (!predicate()) {
@@ -427,7 +290,7 @@ export function promiseWhile(predicate: () => boolean, body: Task<void>): Promis
             // We are not done iterating.  Invoke body() and execute this loop
             // again when it resolves.  Note: The value returned from body() is
             // wrapped in a promise in case it doesn't return a promise.
-            BBPromise.resolve(body())
+            Promise.resolve(body())
             .then(loop, reject);
         }
 
@@ -446,17 +309,17 @@ export function promiseWhile(predicate: () => boolean, body: Task<void>): Promis
  * @returns A new array of Promises that will settle sequentially,
  * starting at index 0.
  */
-export function sequentialSettle(inputPromises: Array<Promise<any>>): Array<Promise<any>> {
+export function sequentialSettle<TResolve>(inputPromises: Array<Promise<TResolve>>): Array<Promise<TResolve>> {
     "use strict";
 
-    const outputPromises: Array<Promise<any>> = [];
+    const outputPromises: Array<Promise<TResolve>> = [];
 
     _.forEach(inputPromises, (curInputPromise) => {
-        const previousPromise: Promise<any> = outputPromises.length > 0 ?
-                                              outputPromises[outputPromises.length - 1] :
-                                              BBPromise.resolve();
+        const previousPromise: Promise<unknown> = outputPromises.length > 0 ?
+                                                  outputPromises[outputPromises.length - 1]! :
+                                                  Promise.resolve();
 
-        const promise: Promise<any> = delaySettle(curInputPromise, previousPromise);
+        const promise: Promise<TResolve> = delaySettle(curInputPromise, previousPromise);
         outputPromises.push(promise);
     });
 
@@ -473,18 +336,19 @@ export function sequentialSettle(inputPromises: Array<Promise<any>>): Array<Prom
  * @returns A Promise wrapping thePromise, but will be settled after waitFor is
  * settled
  */
-export function delaySettle<ResolveType>(thePromise: Promise<ResolveType>, waitFor: Promise<any>): Promise<ResolveType> {
-    "use strict";
-
+export function delaySettle<TResolve>(
+    thePromise: Promise<TResolve>,
+    waitFor:    Promise<unknown>
+): Promise<TResolve> {
     return thePromise
-    .then((result: ResolveType) => {
+    .then((result: TResolve) => {
         // Whether waitFor resolved or rejected, we should resolve
         // with the original resolved value.
         return waitFor
-        .then(() => result )
-        .catch(() => result );
+        .then(() => result)
+        .catch(() => result);
     })
-    .catch((err: any) => {
+    .catch((err: unknown) => {
         // Whether waitFor resolved or rejected, we should reject with the
         // original error.
         return waitFor
@@ -500,10 +364,13 @@ export function delaySettle<ResolveType>(thePromise: Promise<ResolveType>, waitF
  * @param asyncValueFunc - The async mapping function.
  * @return A promise for an array of the resulting mapped values.
  */
-export async function mapAsync<T, V>(collection: Array<T>, asyncValueFunc: (curItem: T) => Promise<V>): Promise<Array<V>>
+export async function mapAsync<TInput, TOutput>(
+    collection:     Array<TInput>,
+    asyncValueFunc: (curItem: TInput) => Promise<TOutput>
+): Promise<Array<TOutput>>
 {
     const promises = _.map(collection, (curItem) => asyncValueFunc(curItem));
-    const values = await BBPromise.all(promises);
+    const values = await Promise.all(promises);
     return values;
 }
 
@@ -518,14 +385,17 @@ export async function mapAsync<T, V>(collection: Array<T>, asyncValueFunc: (curI
  * item from `collection` and the second item is the resolved value returned
  * from `asyncValueFunction`.
  */
-export async function zipWithAsyncValues<T, V>(collection: Array<T>, asyncValueFunc: (curItem: T) => Promise<V>): Promise<Array<[T, V]>>
+export async function zipWithAsyncValues<TInput, TOutput>(
+    collection:     Array<TInput>,
+    asyncValueFunc: (curItem: TInput) => Promise<TOutput>
+): Promise<Array<[TInput, TOutput]>>
 {
     const values = await mapAsync(collection, (curItem) => asyncValueFunc(curItem));
 
-    const pairs: Array<[T, V]> = [];
+    const pairs: Array<[TInput, TOutput]> = [];
     _.forEach(collection, (curItem, index) =>
     {
-        pairs.push([curItem, values[index]]);
+        pairs.push([curItem, values[index]!]);
     });
 
     return pairs;
@@ -541,7 +411,10 @@ export async function zipWithAsyncValues<T, V>(collection: Array<T>, asyncValueF
  * @return A promise for an array of collection items for which the async
  * predicate returned a truthy value.
  */
-export async function filterAsync<T>(collection: Array<T>, asyncPredicate: (curVal: T) => Promise<any>): Promise<Array<T>>
+export async function filterAsync<T>(
+    collection:     Array<T>,
+    asyncPredicate: (curVal: T) => Promise<unknown>
+): Promise<Array<T>>
 {
     const pairs = await zipWithAsyncValues(collection, asyncPredicate);
     return _.chain(pairs)
@@ -562,7 +435,10 @@ export async function filterAsync<T>(collection: Array<T>, asyncPredicate: (curV
  * the predicate resolved to a truthy value.  The second item is an array for
  * which the predicate resolved to a falsy value.
  */
-export async function partitionAsync<T>(collection: Array<T>, asyncPredicate: (curVal: T) => Promise<any>): Promise<[Array<T>, Array<T>]>
+export async function partitionAsync<T>(
+    collection:     Array<T>,
+    asyncPredicate: (curVal: T) => Promise<unknown>
+): Promise<[Array<T>, Array<T>]>
 {
     const pairs = await zipWithAsyncValues(collection, asyncPredicate);
 
@@ -583,18 +459,21 @@ export async function partitionAsync<T>(collection: Array<T>, asyncPredicate: (c
  * collection item should be removed.
  * @return A promise for an array of collection items that have been removed.
  */
-export async function removeAsync<T>(collection: Array<T>, asyncPredicate: (curVal: T) => Promise<any>): Promise<Array<T>>
+export async function removeAsync<T>(
+    collection:     Array<T>,
+    asyncPredicate: (curVal: T) => Promise<unknown>
+): Promise<Array<T>>
 {
     const pairs = await zipWithAsyncValues(collection, asyncPredicate);
 
     const removed: Array<T> = [];
     for (let i = pairs.length - 1; i >= 0; i--)
     {
-        const curPair = pairs[i];
-        if (!!curPair[1])
+        const [item, predicateResult] = pairs[i]!;
+        if (predicateResult)
         {
             // Remove the current item.
-            removed.push(curPair[0]);
+            removed.push(item);
             collection.splice(i, 1);
         }
     }

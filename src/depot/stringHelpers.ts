@@ -1,5 +1,6 @@
+import * as os from "os";
 import * as _ from "lodash";
-import {piNewline} from "./regexpHelpers";
+import {createEolRegex} from "./regexpHelpers";
 
 
 /**
@@ -38,7 +39,7 @@ export function numInitial(str: string, padStr: string): number
 export function indent(
     src: string,
     numSpacesOrPad: number | string,
-    skipFirstLine: boolean = false
+    skipFirstLine = false
 ): string
 {
     if (numSpacesOrPad === 0) {
@@ -55,9 +56,11 @@ export function indent(
         // The only way replace() will replace all instances is to use the "g"
         // flag with replace(). Use the m flag so that ^ and $ match within the
         // string.
-        const replaceRegex: RegExp = /^(.*?)$/gm;
+        // TODO: Convert the following regex to use named capture groups.
+        // eslint-disable-next-line prefer-named-capture-group
+        const replaceRegex = /^(.*?)$/gm;
         const replaceFunc = function replaceFunc(
-            match: any,
+            match: string,
             group1: string,
             offset: number
         ): string {
@@ -80,9 +83,9 @@ export function indent(
  *     possible.  If `false`, only one occurrence will be removed.
  * @return A new version of str without the indentations
  */
-export function outdent(str: string, padStr: string = " ", greedy: boolean = true): string
+export function outdent(str: string, padStr = " ", greedy = true): string
 {
-    const lines = str.split(piNewline);
+    const lines = splitIntoLines(str, true);
     const initOccurrences = _.map(lines, (curLine) => numInitial(curLine, padStr));
     let numToRemove = _.min(initOccurrences);
     if (!greedy) {
@@ -95,7 +98,7 @@ export function outdent(str: string, padStr: string = " ", greedy: boolean = tru
 
     const resultLines = _.map(lines, (curLine) => curLine.slice(numCharsToRemove));
     // Join the lines back together again.
-    return resultLines.join("\n");
+    return resultLines.join("");
 }
 
 
@@ -109,7 +112,7 @@ const blankLineRegex = /^\s*$/;
  */
 export function trimBlankLines(str: string): string
 {
-    const lines = str.split(piNewline);
+    const lines = splitIntoLines(str, true);
 
     while ((lines.length > 0) &&
           blankLineRegex.test(lines[0]))
@@ -123,15 +126,49 @@ export function trimBlankLines(str: string): string
         lines.pop();
     }
 
-    return lines.join("\n");
+    // If lines have been removed from the end, we will have a new last line.
+    // We need to make sure that new last line does not have an EOL.
+    lines[lines.length - 1] = lines[lines.length - 1].replace(createEolRegex(), "");
+
+    return lines.join("");
 }
 
 
+/**
+ * Returns a string that is the same as `str`, but with blank lines removed.
+ * @param str - The source string
+ * @return A new string with blank lines removed
+ */
 export function removeBlankLines(str: string): string
 {
-    let lines = str.split(piNewline);
-    lines = _.filter(lines, (curLine) => !blankLineRegex.test(curLine));
-    return lines.join("\n");
+    if (str.length === 0) {
+        return "";
+    }
+
+    let lines = splitIntoLines(str, true);
+    lines = _.filter(lines, (curLine) => !isBlank(curLine));
+
+    // If all processed lines were blank, just return an empty string.
+    if (lines.length === 0) {
+        return "";
+    }
+
+    // If lines have been removed from the end, we will have a new last line.
+    // We need to make sure that new last line does not have an EOL.
+    lines[lines.length - 1] = lines[lines.length - 1].replace(createEolRegex(), "");
+
+    return lines.join("");
+}
+
+
+/**
+ * Determines whether `text` consists of nothing but whitespace.
+ * @param text - The string to analyze
+ * @return true if `text` is nothing but whitespace; false otherwise.
+ */
+export function isBlank(text: string): boolean
+{
+    return blankLineRegex.test(text);
 }
 
 
@@ -146,6 +183,52 @@ const whitespaceRegex = /\s+/g;
 export function removeWhitespace(str: string): string
 {
     return str.replace(whitespaceRegex, "");
+}
+
+
+/**
+ * Splits a string into its individual lines.
+ * @param text - The text to be split into individual lines
+ * @param retainLineEndings - Whether each line should include the original line endings
+ * @return An array containing the individual lines from `text`.
+ */
+export function splitIntoLines(text: string, retainLineEndings = false): Array<string>
+{
+    if (text.length === 0)
+    {
+        return [];
+    }
+
+    const lines: Array<string> = [];
+    const eolRegex = createEolRegex("g");
+    let done = false;
+
+    while (!done)
+    {
+
+        const startIndex = eolRegex.lastIndex;
+
+        const match = eolRegex.exec(text);
+        if (match)
+        {
+
+            let line: string = text.slice(startIndex, match.index);
+            if (retainLineEndings)
+            {
+                line += match[0];
+            }
+            lines.push(line);
+
+        }
+        else
+        {
+            const line = text.slice(startIndex);
+            lines.push(line);
+            done = true;
+        }
+    }
+
+    return lines;
 }
 
 
@@ -172,7 +255,7 @@ export function padLeft(src: string, pad: string, desiredLength: number): string
         return src;
     }
 
-    let fullPad: string = "";
+    let fullPad = "";
     while (fullPad.length < numPadChars)
     {
         fullPad = fullPad + pad;
@@ -191,7 +274,7 @@ export function padRight(src: string, pad: string, desiredLength: number): strin
         return src;
     }
 
-    let fullPad: string = "";
+    let fullPad = "";
     while (fullPad.length < numPadChars)
     {
         fullPad = fullPad + pad;
@@ -199,4 +282,51 @@ export function padRight(src: string, pad: string, desiredLength: number): strin
 
     fullPad = fullPad.slice(0, numPadChars);
     return src + fullPad;
+}
+
+
+/**
+ * Figures our what EOL string is being used in the specified string.
+ * @param text - The string to analyze
+ * @return A string representing the EOL characters being used in `text`.  If no
+ * end-of-line is found, and empty string is returned.
+ */
+export function getEol(text: string): string
+{
+    const match = createEolRegex().exec(text);
+    if (!match) {
+        return "";
+    }
+    else {
+        return match[0];
+    }
+}
+
+
+/**
+ * Concatenates an array of strings into a single string using the specified
+ * separator.
+ * @param strings - The strings to join
+ * @param sep - The separator to insert between each array element
+ * @return Description
+ */
+export function concatStrings(strings: Array<string>, sep: string = os.EOL): string
+{
+    return strings.join(sep);
+}
+
+
+/**
+ * Repeats _str_ to build a new string containing `numChars` characters.
+ * @param str - The string to repeat until the given length is achieved
+ * @param numChars - The desired length of the returned string.
+ * @return A new string containing _str_ repeated until the specified length is
+ * achieved.
+ */
+export function repeat(str: string, numChars: number): string
+{
+    const repeatCount = Math.ceil(numChars / str.length);
+    const tooLong = _.repeat(str, repeatCount);
+    const res = tooLong.substr(0, numChars);
+    return res;
 }

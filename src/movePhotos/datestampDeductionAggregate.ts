@@ -1,18 +1,16 @@
 import * as _ from "lodash";
 import { Datestamp } from "./datestamp";
-import
-    {
-        DatestampDeduction,
-        isSuccesfulDatestampDeduction,
-        IDatestampDeductionSuccess,
-        isFailureDatestampDeduction, ConfidenceLevel
-    } from "./datestampDeduction";
+import { DatestampDeduction,
+         isSuccesfulDatestampDeduction,
+         IDatestampDeductionSuccess,
+         isFailureDatestampDeduction,
+         ConfidenceLevel } from "./datestampDeduction";
 
 
 export class DatestampDeductionAggregate
 {
     // #region Instance Data Members
-    private _deductions: Array<DatestampDeduction> = [];
+    private readonly _deductions: Array<DatestampDeduction> = [];
     // #endregion
 
 
@@ -44,9 +42,10 @@ export class DatestampDeductionAggregate
     public getFailedDeductionExplanations(): Array<string>
     {
         const explanations = _.chain(this._deductions)
-            .filter(isFailureDatestampDeduction)
-            .map((curFailedDeduction) => curFailedDeduction.explanation)
-            .value();
+        .filter(isFailureDatestampDeduction)
+        .map((curFailedDeduction) => curFailedDeduction.explanation)
+        .value();
+
         return explanations;
     }
 
@@ -60,7 +59,10 @@ export class DatestampDeductionAggregate
         }
 
         const firstDatestamp: Datestamp = successfulDeductions[0].datestamp!;
-        const allAreEqual = _.every(successfulDeductions, (curDeduction) => curDeduction.datestamp.equals(firstDatestamp));
+        const allAreEqual = _.every(
+            successfulDeductions,
+            (curDeduction) => curDeduction.datestamp.equals(firstDatestamp)
+        );
         return !allAreEqual;
     }
 
@@ -80,7 +82,7 @@ export class DatestampDeductionAggregate
         const confidenceGroups = _.groupBy(successfulDeductions, (curDeduction) => curDeduction.confidence);
 
         const highestConfidenceLevelFound = _.find(
-            [ConfidenceLevel.HIGH, ConfidenceLevel.MEDIUM, ConfidenceLevel.LOW],
+            [ConfidenceLevel.High, ConfidenceLevel.Medium, ConfidenceLevel.Low],
             (curConfidenceLevel) =>
             {
                 const deductions = confidenceGroups[curConfidenceLevel];

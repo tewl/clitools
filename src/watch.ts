@@ -1,9 +1,8 @@
 import {watch} from "fs";
 import * as cp from "child_process";
 import {emitKeypressEvents, Key} from "readline";
-import * as BBPromise from "bluebird";
 import * as _ from "lodash";
-import chalk from "chalk";
+import chalk = require("chalk");
 import * as yargs from "yargs";
 import {Directory} from "./depot/directory";
 import {File} from "./depot/file";
@@ -42,18 +41,20 @@ function getConfiguration(): IWatchConfig
     const argv = yargs
     .usage("Watches a directory.")
     .help()
-    .option("watch",
+    .option(
+        "watch",
         {
             demandOption: false,
-            type: "string",
-            default: ".",
-            describe: "specify a directory to watch."
+            type:         "string",
+            default:      ".",
+            describe:     "specify a directory to watch."
         }
     )
-    .option("ignore",
+    .option(
+        "ignore",
         {
             demandOption: false,
-            describe: "Ignore activity for files matching the specified regex (can be used multiple times)"
+            describe:     "Ignore activity for files matching the specified regex (can be used multiple times)"
         }
     )
     .wrap(80)
@@ -222,12 +223,12 @@ function main(): void {
         console.log(START_TEXT(SEP));
 
         let spawnOptions: cp.SpawnOptions | undefined;
-        if (getOs() === OperatingSystem.WINDOWS) {
+        if (getOs() === OperatingSystem.Windows) {
             spawnOptions = {shell: true};
         }
         spawnResult = spawn(config.cmd, config.cmdArgs, spawnOptions, undefined, process.stdout, process.stderr);
 
-        BBPromise.resolve(spawnResult.closePromise)
+        Promise.resolve(spawnResult.closePromise)
         .then(() => {
             const endTimestamp = new Date().toLocaleString("en-US");
             const msg = `✓ Success: ${commandStr}\n` +
@@ -258,10 +259,10 @@ main();
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Tests to see if any patterns match str
+ * Tests to see if any patterns match _str_
  * @param str - The string to test
  * @param patterns - The regular expressions to test against
- * @return true if one or more patterns match str
+ * @return true if one or more patterns match _str_
  */
 function matchesAny(str: string, patterns: Array<RegExp>): boolean {
     return _.some(patterns, (curPattern) => curPattern.test(str));

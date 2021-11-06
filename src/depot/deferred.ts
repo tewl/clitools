@@ -1,21 +1,18 @@
-import * as BBPromise from "bluebird";
-
-
-export class Deferred<ResolveType>
+export class Deferred<TResolve>
 {
-    public promise: Promise<ResolveType>;
-    public resolve: (result: ResolveType) => void;
-    public reject: (err: any) => void;
+    public readonly promise: Promise<TResolve>;
+    public resolve: (result: TResolve) => void;
+    public reject: (err: unknown) => void;
 
     constructor()
     {
         // The following temporary assignments are here to get rid of a bogus TS
         // error: "TS2564: Property 'resolve' has no initializer and is not
         // definitely assigned in the constructor."
-        this.resolve = (): void => {};
-        this.reject = (): void => {};
+        this.resolve = (): void => { return; };
+        this.reject = (): void => { return; };
 
-        this.promise = new BBPromise((resolve: (result: ResolveType) => void, reject: (err: any) => void) => {
+        this.promise = new Promise((resolve: (result: TResolve) => void, reject: (err: unknown) => void) => {
             this.resolve = resolve;
             this.reject = reject;
         });
@@ -32,14 +29,14 @@ export class Deferred<ResolveType>
  * @param theDeferred - The Deferred that will sink the output from `thePromise`
  * @return description
  */
-export function connectPromiseToDeferred<ResolveType>(
-    thePromise: Promise<ResolveType>,
-    theDeferred: Deferred<ResolveType>
+export function connectPromiseToDeferred<TResolve>(
+    thePromise: Promise<TResolve>,
+    theDeferred: Deferred<TResolve>
 ): void
 {
     thePromise
     .then(
-        (result: ResolveType) => { theDeferred.resolve(result); },
+        (result: TResolve) => { theDeferred.resolve(result); },
         (err) => { theDeferred.reject(err); }
     );
 }
