@@ -25,6 +25,7 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // These scripts will be made executable.
 //
 const BUILT_SCRIPTS = [
+    path.join("src", "hr.js"),
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
     path.join("src", "movePhotos", "movePhotos.js")
