@@ -20,16 +20,7 @@ const result = evaluate(expression);
 
 if (succeeded(result))
 {
-    // Form the output.
-    let answer = `${expression} = ${result.value.toString(true)}`;
-
-    // If the answer can be reduced, provide an additional " = ..." at the end
-    // of the output.
-    const reduceResult = result.value.reduce();
-    if (reduceResult.wasReduced) {
-        answer += ` = ${reduceResult.reducedFraction.toString(false)}`;
-    }
-
+    const answer = `${expression} = ${result.value.stringRepresentations().join(" = ")}`;
     console.log(answer);
 }
 else {
