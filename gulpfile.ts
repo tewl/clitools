@@ -26,6 +26,7 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // These scripts will be made executable.
 //
 const scripts: Array<string> = [
+    path.join("src", "evaluate.js"),
     path.join("src", "hr.js"),
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
@@ -108,7 +109,8 @@ export async function ut(): Promise<void>
 {
     const result = await runUnitTests(true);
     if (succeeded(result)) {
-        console.log(result.value);
+        // Since we allowed output while running the unit test task, we don't
+        // have to print it out again.
     }
     else {
         // Since we allowed output while running the unit test task, we don't
