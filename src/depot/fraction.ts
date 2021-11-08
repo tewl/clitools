@@ -1,25 +1,20 @@
 import * as _ from "lodash";
+import { Result, failed, failedResult, succeededResult } from "./result";
 
 
 // Regular expressions used to parse fraction strings.
-// TODO: Convert the following regex to use named capture groups.
-// eslint-disable-next-line prefer-named-capture-group
-const justWhole = /^(\d+)$/;
-// TODO: Convert the following regex to use named capture groups.
-// eslint-disable-next-line prefer-named-capture-group
-const justFrac  = /^(\d+)\/(\d+)$/;
-// TODO: Convert the following regex to use named capture groups.
-// eslint-disable-next-line prefer-named-capture-group
-const allParts  = /^(\d+) (\d+)\/(\d+)$/;
+const justWhole = /^(?<whole>\d+)$/;
+const justFrac  = /^(?<num>\d+)\/(?<den>\d+)$/;
+const allParts  = /^(?<whole>\d+) (?<num>\d+)\/(?<den>\d+)$/;
 
 
 export class Fraction
 {
-    public static from(val: number | Fraction | string): Fraction
+    public static from(val: number | Fraction | string): Result<Fraction, string>
     {
         if (typeof val === "number")
         {
-            return Fraction.fromNumber(val);
+            return succeededResult(Fraction.fromNumber(val));
         }
         else if (typeof val === "string")
         {
@@ -27,17 +22,15 @@ export class Fraction
         }
         else
         {
-            return val;
+            return succeededResult(val);
         }
     }
 
 
-    public static fromParts(whole: number, num: number, den: number): Fraction; // tslint:disable-line:unified-signatures
-    public static fromParts(num: number, den: number): Fraction;                // tslint:disable-line:unified-signatures
-    public static fromParts(whole: number): Fraction;
-    public static fromParts(first: number,
-                            second?: number,
-                            third?: number): Fraction
+    public static fromParts(whole: number, num: number, den: number): Result<Fraction, string>;
+    public static fromParts(num: number, den: number): Result<Fraction, string>;
+    public static fromParts(whole: number): Result<Fraction, string>;
+    public static fromParts(first: number, second?: number, third?: number): Result<Fraction, string>
     {
         let whole: number;
         let num: number;
@@ -70,15 +63,15 @@ export class Fraction
         //
         if (!_.isSafeInteger(whole))
         {
-            throw new Error(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
+            return failedResult(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
         }
         if (!_.isSafeInteger(num))
         {
-            throw new Error(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
+            return failedResult(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
         }
         if (!_.isSafeInteger(den))
         {
-            throw new Error(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
+            return failedResult(`Fractions can only be created using integer values: whole=${whole}, num=${num}, den=${den}`);
         }
 
         //
@@ -86,10 +79,10 @@ export class Fraction
         //
         if (den === 0)
         {
-            throw new Error(`The denominator of a Fraction cannot be zero: whole=${whole}, num=${num}, den=${den}`);
+            return failedResult(`The denominator of a Fraction cannot be zero: whole=${whole}, num=${num}, den=${den}`);
         }
         if (den < 0) {
-            throw new Error(`The denominator of a Fraction cannot be negative: whole=${whole}, num=${num}, den=${den}`);
+            return failedResult(`The denominator of a Fraction cannot be negative: whole=${whole}, num=${num}, den=${den}`);
         }
 
         //
@@ -104,7 +97,7 @@ export class Fraction
             // When there is a whole component, the numerator can only be
             // positive.
             if (num < 0) {
-                throw new Error(`Fractions with a whole part cannot have a negative numerator: whole=${whole}, num=${num}, den=${den}`);
+                return failedResult(`Fractions with a whole part cannot have a negative numerator: whole=${whole}, num=${num}, den=${den}`);
             }
             isPositive = whole >= 0;
         }
@@ -117,11 +110,11 @@ export class Fraction
         if (!isPositive) {
             num = num * -1;
         }
-        return new Fraction(num, den);
+        return succeededResult(new Fraction(num, den));
     }
 
 
-    public static fromString(str: string): Fraction
+    public static fromString(str: string): Result<Fraction, string>
     {
         str = _.trim(str);
 
@@ -135,30 +128,28 @@ export class Fraction
         matches = justWhole.exec(str);
         if (matches)
         {
-            const whole = parseInt(matches[1], 10) * negativeAdjuster;
+            const whole = parseInt(matches.groups!.whole, 10) * negativeAdjuster;
             return Fraction.fromParts(whole);
         }
 
         matches = justFrac.exec(str);
         if (matches)
         {
-            const num = parseInt(matches[1], 10) * negativeAdjuster;
-            const den = parseInt(matches[2], 10);
+            const num = parseInt(matches.groups!.num, 10) * negativeAdjuster;
+            const den = parseInt(matches.groups!.den, 10);
             return Fraction.fromParts(num, den);
         }
 
         matches = allParts.exec(str);
         if (matches)
         {
-            const whole = parseInt(matches[1], 10) * negativeAdjuster;
-            const num   = parseInt(matches[2], 10);
-            const den   = parseInt(matches[3], 10);
+            const whole = parseInt(matches.groups!.whole, 10) * negativeAdjuster;
+            const num   = parseInt(matches.groups!.num,   10);
+            const den   = parseInt(matches.groups!.den,   10);
             return Fraction.fromParts(whole, num, den);
         }
 
-        throw new Error(
-            `The string '${str}' cannot be converted into a Fraction.`
-        );
+        return failedResult(`The string '${str}' cannot be converted into a Fraction.`);
     }
 
 
@@ -170,9 +161,7 @@ export class Fraction
 
         // A regular expression for a number that may be negative and always has
         // a fractional part.
-        // TODO: Convert the following regex to use named capture groups.
-        // eslint-disable-next-line prefer-named-capture-group
-        const numRegex = /^(-?)(\d+)\.(\d+)$/;
+        const numRegex = /^(?<sign>-?)(?<while>\d+)\.(?<decimal>\d+)$/;
 
         const numStr = String(num);
         const negativeAdjuster = num < 0 ? -1 : 1;
@@ -182,7 +171,7 @@ export class Fraction
         if (!match) {
             throw new Error("Error converting from number to Fraction.");
         }
-        const fracStr = match[3];
+        const fracStr = match.groups!.decimal;
         const denominator = Math.pow(10, fracStr.length);
         const numerator   = whole * denominator + parseInt(fracStr, 10) * negativeAdjuster;
         return new Fraction(numerator, denominator);
@@ -204,8 +193,16 @@ export class Fraction
             }
         }
 
-        const fracA = Fraction.from(a);
-        const fracB = Fraction.from(b);
+        const fracAResult = Fraction.from(a);
+        if (failed(fracAResult)) {
+            throw new Error("Failed to convert number or fraction to a fraction. Should never happen.");
+        }
+        const fracA = fracAResult.value;
+        const fracBResult = Fraction.from(b);
+        if (failed(fracBResult)) {
+            throw new Error("Failed to convert number or fraction to a fraction. Should never happen.");
+        }
+        const fracB = fracBResult.value;
 
         const crossA = fracA._num * fracB._den;
         const crossB = fracA._den * fracB._num;
@@ -272,7 +269,7 @@ export class Fraction
 
     public stringRepresentations(): Array<string>
     {
-        let lastUsedValue: Fraction = Fraction.from(this);
+        let lastUsedValue: Fraction = Fraction.from(this).value!;
 
         // First, get the standard (possibly improper) form of this fraction.
         const representations = [lastUsedValue.toString(true)];
@@ -417,7 +414,7 @@ export class Fraction
     public add(other: number): Fraction;
     public add(other: Fraction | number): Fraction
     {
-        const otherFrac = Fraction.from(other);
+        const otherFrac = Fraction.from(other).value!;
         const lcm = leastCommonMultiple(this._den, otherFrac._den);
 
         const thisScale = lcm  / this._den;
@@ -434,7 +431,7 @@ export class Fraction
     public subtract(other: number): Fraction;
     public subtract(other: Fraction | number): Fraction
     {
-        const otherFrac = Fraction.from(other);
+        const otherFrac = Fraction.from(other).value!;
         const lcm = leastCommonMultiple(this._den, otherFrac._den);
 
         const thisScale = lcm  / this._den;
@@ -451,7 +448,7 @@ export class Fraction
     public multiply(other: number): Fraction;
     public multiply(other: Fraction | number): Fraction
     {
-        const otherFrac = Fraction.from(other);
+        const otherFrac = Fraction.from(other).value!;
         const num = this._num * otherFrac._num;
         const den = this._den * otherFrac._den;
         const product = new Fraction(num, den);
@@ -464,7 +461,7 @@ export class Fraction
     public divide(other: Fraction): Fraction;
     public divide(other: number | Fraction): Fraction
     {
-        const fracOther = Fraction.from(other);
+        const fracOther = Fraction.from(other).value!;
         const result = this.multiply(fracOther.reciprocal());
         return result;
     }
@@ -523,7 +520,9 @@ export class Fraction
      */
     public abs(): Fraction
     {
-        return Fraction.fromParts(Math.abs(this._num), this._den);
+        const num = Math.abs(this._num);
+        const absoluteVal: Fraction = Fraction.fromParts(num, this._den).value!;
+        return absoluteVal;
     }
 
 
@@ -537,7 +536,7 @@ export class Fraction
         increment: number | Fraction
     ): {floor: Fraction, ceil: Fraction, nearest: Fraction}
     {
-        const incr = Fraction.from(increment);
+        const incr = Fraction.from(increment).value!;
 
         // The increment must be a positive value.
         if (incr._num === 0 || incr.toNumber() < 0) {
@@ -550,8 +549,8 @@ export class Fraction
             throw new Error("bracket() 1 must be divisible by the specified increment.");
         }
 
-        const rangeFloor = Fraction.from(this.floor());
-        const rangeCeil  = Fraction.from(this.ceil());
+        const rangeFloor = Fraction.from(this.floor()).value!;
+        const rangeCeil  = Fraction.from(this.ceil()).value!;
 
         let floorVal: Fraction;
 
