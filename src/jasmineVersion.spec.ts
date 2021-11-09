@@ -1,12 +1,14 @@
-beforeAll(() => {
+beforeAll(() =>
+{
     console.log("Running Jasmine " + getJasmineVersion() + ".");
 });
 
 
-describe("jasmine", () => {
+describe("jasmine", () =>
+{
 
-
-    it("version will be printed while running the unit tests", () => {
+    it("version will be printed while running the unit tests", () =>
+    {
         expect(getJasmineVersion()).toBe("3.10.1");
     });
 
@@ -14,7 +16,8 @@ describe("jasmine", () => {
 });
 
 
-function getJasmineVersion(): string {
+function getJasmineVersion(): string
+{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (jasmine as any).version || (jasmine.getEnv() as any).versionString();
 }

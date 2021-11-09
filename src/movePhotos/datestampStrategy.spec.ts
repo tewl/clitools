@@ -35,7 +35,8 @@ describe("datestampStrategyFilePath()", () =>
     });
 
 
-    it("when dashed datestamp exists, returns medium confidence deduction", async () => {
+    it("when dashed datestamp exists, returns medium confidence deduction", async () =>
+    {
         const context = setup();
         const tmpSrcFile = new File(context.tmpSrcDir, "2012-08-06.jpg");
 
@@ -44,7 +45,8 @@ describe("datestampStrategyFilePath()", () =>
     });
 
 
-    it("when underscored datestamp exists, returns medium confidence deduction", async () => {
+    it("when underscored datestamp exists, returns medium confidence deduction", async () =>
+    {
         const context = setup();
         const tmpSrcFile = new File(context.tmpSrcDir, "2012_08_06.jpg");
 

@@ -54,7 +54,8 @@ async function movePhotosMain(): Promise<number>
 
 
 
-    const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) => {
+    const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) =>
+    {
         const highestConfidenceDeductions = curSrcAndDeductionAggregate[1].getHighestConfidenceDeductions();
         return highestConfidenceDeductions.length > 0 &&
                !curSrcAndDeductionAggregate[1].isConflicted() &&
@@ -67,7 +68,8 @@ async function movePhotosMain(): Promise<number>
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    const __fileComparers = _.map(srcFiles, (curSrcFile) => {
+    const __fileComparers = _.map(srcFiles, (curSrcFile) =>
+    {
         return FileComparer.create(
             curSrcFile,
             new File(destDir, path.relative(srcDir.toString(), curSrcFile.toString()))
@@ -158,7 +160,8 @@ async function promptAndDeleteFiles(files: Array<File>, prompt: string): Promise
     {
         await promptToContinue(enhancedPrompt, true);
 
-    } catch (error)
+    }
+    catch (error)
     {
         // The user did not confirm the deletion.  Do nothing.
         return false;

@@ -23,6 +23,7 @@ if (succeeded(result))
     const answer = `${expression} = ${result.value.stringRepresentations().join(" = ")}`;
     console.log(answer);
 }
-else {
+else
+{
     console.error(result.error);
 }

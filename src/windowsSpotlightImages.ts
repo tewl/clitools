@@ -68,17 +68,20 @@ async function windowsSpotlightImagesMain(): Promise<number>
 
     // Keep only the files greater than a certain size.  This gets rid of icons
     // that are also kept in this directory.
-    assetFiles = await filterAsync(assetFiles, async (curFile) => {
+    assetFiles = await filterAsync(assetFiles, async (curFile) =>
+    {
         const stats = (await curFile.exists())!;
         return stats.size > 200 * 1024;
     });
 
-    const fileComparers = _.map(assetFiles, (curSrcFile) => {
+    const fileComparers = _.map(assetFiles, (curSrcFile) =>
+    {
         const destFile = new File(outDir, curSrcFile.baseName + ".jpg");
         return FileComparer.create(curSrcFile, destFile);
     });
 
-    const removed = await removeAsync(fileComparers, async (curFileComparer) => {
+    const removed = await removeAsync(fileComparers, async (curFileComparer) =>
+    {
         const areIdentical = await curFileComparer.bothExistAndIdentical();
         return areIdentical;
     });
@@ -86,7 +89,8 @@ async function windowsSpotlightImagesMain(): Promise<number>
     console.log(`Identical files: ${removed.length}`);
     console.log(`New files:       ${fileComparers.length}`);
 
-    const __destFiles = await mapAsync(fileComparers, (curFileComparer) => {
+    const __destFiles = await mapAsync(fileComparers, (curFileComparer) =>
+    {
         return curFileComparer.leftFile.copy(curFileComparer.rightFile);
     });
 
