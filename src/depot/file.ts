@@ -84,6 +84,7 @@ export class File
 
     /**
      * Gets the extension of this file.  This includes the initial dot (".").
+     * If the file has no extension an empty string is returned.
      * @return This file's extension
      */
     public get extName(): string
@@ -112,6 +113,29 @@ export class File
     public equals(otherFile: File): boolean
     {
         return this.absPath() === otherFile.absPath();
+    }
+
+
+    /**
+     * Determines whether this file is within the specified directory
+     * @param dir - The directory to search within
+     * @param recursiveSearch - Whether to search recursively through
+     * subdirectories for this file
+     * @returns true if this file was found; false otherwise.
+     */
+    public isWithin(dir: Directory, recursiveSearch: boolean): boolean
+    {
+        if (recursiveSearch)
+        {
+            const fileAbsPath = this.absPath();
+            const dirAbsPath = dir.absPath();
+            const isWithin = fileAbsPath.startsWith(dirAbsPath);
+            return isWithin;
+        }
+        else
+        {
+            return this.directory.equals(dir);
+        }
     }
 
 
