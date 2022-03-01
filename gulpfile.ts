@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as _ from "lodash";
-import del = require("del");
 import chalk = require("chalk");
 import { nodeBinForOs, createCmdLaunchScript, makeNodeScriptExecutable } from "./dev/depot/nodeUtil";
 import { Directory } from "./dev/depot/directory";
@@ -28,6 +27,7 @@ const tmpDir  = new Directory(__dirname, "tmp");
 const scripts: Array<string> = [
     path.join("src", "evaluate.js"),
     path.join("src", "hr.js"),
+    path.join("src", "mergedBranches.js"),
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
     path.join("src", "movePhotos", "movePhotos.js")
@@ -52,12 +52,9 @@ export async function clean(): Promise<void>
 
 async function runClean(): Promise<Result<undefined, string>>
 {
+    const dirsToDelete = [tmpDir, distDir];
     try {
-        await del([
-            tmpDir.toString() + "/**",
-            distDir.toString() + "/**"
-        ]);
-
+        dirsToDelete.forEach((curDir) => curDir.deleteSync());
         return succeededResult(undefined);
     } catch (error) {
         return failedResult(`Failed to delete files. ${JSON.stringify(error, undefined, 4)}`);
@@ -264,7 +261,7 @@ function makeExecutable(): Promise<void>
 
     //
     // Insert a shebang line into each script and turn on the executable
-    // permission on each script file. 
+    // permission on each script file.
     //
     const makeExecutablePromises = mapAsync(scriptFiles, (curJsScriptFile) => {
         console.log(`Making executable:  ${curJsScriptFile.toString()}`);
