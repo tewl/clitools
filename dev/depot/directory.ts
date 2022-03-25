@@ -235,6 +235,12 @@ export class Directory
     }
 
 
+    /**
+     * Creates the directory represented by this instance.  If needed,
+     * nonexistent parent directories will also be created.
+     * @returns A Promise that resolves with this Directory instance (for
+     * chaining) when this operation completes.
+     */
     public ensureExists(): Promise<Directory>
     {
         return this.exists()
@@ -311,6 +317,11 @@ export class Directory
     }
 
 
+    /**
+     * Creates the directory represented by this instance.  If needed,
+     * nonexistent parent directories will also be created.
+     * @returns This Directory instance (for chaining)
+     */
     public ensureExistsSync(): this
     {
         if (this.existsSync())
@@ -374,6 +385,12 @@ export class Directory
     }
 
 
+    /**
+     * Deletes the contents of this directory.  This directory is created if it
+     * does not exist.
+     * @returns A Promise that resolves with this Directory instance when this
+     * operation has finished.
+     */
     public empty(): Promise<Directory>
     {
         return this.delete()
@@ -384,6 +401,11 @@ export class Directory
     }
 
 
+    /**
+     * Deletes the contents of this directory.  This directory is created if it
+     * does not exist.
+     * @returns This Directory instance (to facilitate chaining)
+     */
     public emptySync(): this
     {
         this.deleteSync();
@@ -391,6 +413,10 @@ export class Directory
     }
 
 
+    /**
+     * Deletes this directory.  Does nothing if this directory does not exist.
+     * @returns A Promise that is resolved when this operation has finished.
+     */
     public delete(): Promise<void>
     {
         return this.exists()
@@ -438,6 +464,9 @@ export class Directory
     }
 
 
+    /**
+     * Deletes this directory.  Does nothing if this directory does not exist.
+     */
     public deleteSync(): void
     {
         if (!this.existsSync())
@@ -470,6 +499,19 @@ export class Directory
         // Now that all of the items in the directory have been deleted, delete the
         // directory itself.
         fs.rmdirSync(this._dirPath);
+    }
+
+
+    /**
+     * Determines whether this directory contains the specified file
+     * @param file - The file to search for within this directory
+     * @param recursiveSearch - Whether to search recursively through
+     * subdirectories for the file
+     * @returns true if the file was found; false otherwise.
+     */
+    public contains(file: File, recursiveSearch: boolean): boolean
+    {
+        return file.isWithin(this, recursiveSearch);
     }
 
 

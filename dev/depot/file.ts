@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import * as readline from "readline";
 import * as _ from "lodash";
 import {ListenerTracker} from "./listenerTracker";
 import {promisify1} from "./promisify";
@@ -10,6 +11,13 @@ import {PathPart, reducePathParts} from "./pathHelpers";
 
 const unlinkAsync = promisify1<void, string>(fs.unlink);
 const statAsync   = promisify1<fs.Stats, string>(fs.stat);
+
+
+/**
+ * Callback that is invoked for each line of the file as it is read.  Note:
+ * lineText does not contain the trailing \n, \r or \r\n characters.
+ */
+export type ReadLinesCallback = (lineText: string, lineNum: number) => void;
 
 
 export class File
@@ -84,6 +92,7 @@ export class File
 
     /**
      * Gets the extension of this file.  This includes the initial dot (".").
+     * If the file has no extension an empty string is returned.
      * @return This file's extension
      */
     public get extName(): string
@@ -112,6 +121,29 @@ export class File
     public equals(otherFile: File): boolean
     {
         return this.absPath() === otherFile.absPath();
+    }
+
+
+    /**
+     * Determines whether this file is within the specified directory
+     * @param dir - The directory to search within
+     * @param recursiveSearch - Whether to search recursively through
+     * subdirectories for this file
+     * @returns true if this file was found; false otherwise.
+     */
+    public isWithin(dir: Directory, recursiveSearch: boolean): boolean
+    {
+        if (recursiveSearch)
+        {
+            const fileAbsPath = this.absPath();
+            const dirAbsPath = dir.absPath();
+            const isWithin = fileAbsPath.startsWith(dirAbsPath);
+            return isWithin;
+        }
+        else
+        {
+            return this.directory.equals(dir);
+        }
     }
 
 
@@ -726,6 +758,55 @@ export class File
     {
         const text = this.readSync();
         return JSON.parse(text);
+    }
+
+
+    /**
+     * Reads this file one line at a time.  The contents of the file are streamed
+     * so that large files can be read while minimizing memory usage.
+     * @param callbackFn - Callback that will be invoked for each line of this
+     * file.
+     * @returns A promise that resolves when the file is done being processed.
+     * The promise will reject if an error is encountered.
+     */
+    public async readLines(callbackFn: ReadLinesCallback): Promise<void>
+    {
+        return new Promise((resolve, reject) =>
+        {
+            try
+            {
+                let lineNum = 1;
+
+                const rl = readline.createInterface({
+                    input:     fs.createReadStream(this.absPath()),
+                    crlfDelay: Infinity
+                });
+
+                const listenerTracker = new ListenerTracker(rl);
+
+                listenerTracker.on("line", (line) =>
+                {
+                    callbackFn(line, lineNum);
+                    lineNum += 1;
+                });
+
+                listenerTracker.once("close", () =>
+                {
+                    listenerTracker.removeAll();
+                    resolve();
+                });
+
+                listenerTracker.once("error", (err) =>
+                {
+                    listenerTracker.removeAll();
+                    reject(err);
+                });
+            }
+            catch (err)
+            {
+                reject(err);
+            }
+        });
     }
 
 }
