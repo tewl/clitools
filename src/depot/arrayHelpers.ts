@@ -49,6 +49,12 @@ export function insertIf<TItem>(
 }
 
 
+/**
+ * Calculates all possible permutations of an array.
+ * @param vals - The values for which all permutations will be calculated.
+ * @returns An array in which each value is an array representing one
+ * permutation of the original array.
+ */
 export function permutations<T>(vals: Array<T>): Array<Array<T>>
 {
     if (vals.length === 0)
@@ -75,4 +81,21 @@ export function permutations<T>(vals: Array<T>): Array<Array<T>>
     }
 
     return allPermutations;
+}
+
+
+/**
+ * If needed, converts the specified value to an array.
+ * @param val - The value to convert into an array (if it is not already an
+ * array)
+ * @returns - The resulting array.
+ */
+export function toArray<T>(val: unknown): Array<T>
+{
+    if (val === undefined || val === null)
+    {
+        return [];
+    }
+
+    return Array.isArray(val) ? val : [val];
 }
