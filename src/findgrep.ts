@@ -13,14 +13,17 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// import chalk = require("chalk");
+import chalk = require("chalk");
 import * as yargs from "yargs";
+import { highlightMatches } from "./depot/chalkHelpers";
 import { Directory } from "./depot/directory";
 import { failed, failedResult, Result, succeededResult } from "./depot/result";
 
 
-// const fileStyle = chalk.green.bold;
-// const hitStyle  = chalk.inverse;
+const fileStyle = chalk.cyan;
+const fileMatchStyle = fileStyle.inverse;
+const lineStyle = chalk.yellow;
+const textMatchStyle  = chalk.inverse;
 
 
 if (require.main === module)
@@ -54,13 +57,50 @@ async function findGrepMain(): Promise<number>
     console.log(`recurse:    ${configResult.value.recurse}`);
     console.log();
 
-    const cwd = new Directory(".");
-    await cwd.walk((fileOrDir) =>
-    {
-        console.log(fileOrDir.toString());
+    const pathRegex = new RegExp(configResult.value.pathRegex, "gi");
+    const textRegex = new RegExp(configResult.value.textRegex, "gi");
 
-        const recurseIntoDir = configResult.value.recurse;
-        return recurseIntoDir;
+    const cwd = new Directory(".");
+    await cwd.walk(async (fileOrDir): Promise<boolean> =>
+    {
+        if (fileOrDir instanceof Directory)
+        {
+            return Promise.resolve(configResult.value.recurse);
+        }
+
+        // See if the file's path matches the path regular expression.  If not,
+        // we are done.
+        const [numPathMatches, highlightedPath] = highlightMatches(fileOrDir.toString(), pathRegex, fileMatchStyle);
+        if (numPathMatches === 0)
+        {
+            return Promise.resolve(false); // Return value does not matter when processing files.
+        }
+
+        const fileText = fileStyle(highlightedPath);
+        let fileProducedOutput = false;
+
+        // Read the file line by line and output lines that match the text
+        // regular expression.
+
+        await fileOrDir.readLines((lineText, lineNum) =>
+        {
+            const [numMatches, highlightedText] = highlightMatches(lineText, textRegex, textMatchStyle);
+            if (numMatches > 0)
+            {
+                const lineNumText = lineStyle(`:${lineNum}`);
+                console.log(fileText + lineNumText + " - " + highlightedText);
+                fileProducedOutput = true;
+            }
+        });
+
+        if (fileProducedOutput)
+        {
+            // The current file produced output.  Leave a blank line at the of
+            // its output.
+            console.log();
+        }
+
+        return false; // Return value does not matter when processing files.
     });
 
     return 0;
