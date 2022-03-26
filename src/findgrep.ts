@@ -13,10 +13,13 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+import * as os from "os";
 import chalk = require("chalk");
 import * as yargs from "yargs";
+import { toArray } from "./depot/arrayHelpers";
 import { highlightMatches } from "./depot/chalkHelpers";
 import { Directory } from "./depot/directory";
+import { matchesAny } from "./depot/regexpHelpers";
 import { failed, failedResult, Result, succeededResult } from "./depot/result";
 
 
@@ -53,6 +56,7 @@ async function findGrepMain(): Promise<number>
     }
 
     console.log(`path regex: ${configResult.value.pathRegex}`);
+    console.log(`path ignores: ${configResult.value.pathIgnores.join(", ")}`);
     console.log(`text regex: ${configResult.value.textRegex}`);
     console.log(`recurse:    ${configResult.value.recurse}`);
     console.log();
@@ -73,6 +77,11 @@ async function findGrepMain(): Promise<number>
         const [numPathMatches, highlightedPath] = highlightMatches(fileOrDir.toString(), pathRegex, fileMatchStyle);
         if (numPathMatches === 0)
         {
+            return Promise.resolve(false); // Return value does not matter when processing files.
+        }
+
+        // If the file's path should be ignored, we are done.
+        if (matchesAny(fileOrDir.toString(), configResult.value.pathIgnores)) {
             return Promise.resolve(false); // Return value does not matter when processing files.
         }
 
@@ -114,6 +123,7 @@ interface IFindGrepConfig
 {
     recurse: boolean;
     pathRegex: string;
+    pathIgnores: Array<RegExp>;
     textRegex: string;
 }
 
@@ -126,7 +136,12 @@ interface IFindGrepConfig
 function getConfiguration(): Result<IFindGrepConfig, string>
 {
     const argv = yargs
-    .usage("Finds text within files.")
+    .usage(
+        [
+            "Finds text within files.",
+            `findgrep [options] "<pathRegex>" "<textRegex>"`
+        ].join(os.EOL)
+    )
     .help()
     .option(
         "recurse",
@@ -134,7 +149,14 @@ function getConfiguration(): Result<IFindGrepConfig, string>
             demandOption: false,
             type:         "boolean",
             default:      false,
-            describe:     "search through subdirectories recursively."
+            describe:     "search through subdirectories recursively"
+        }
+    )
+    .option(
+        "pathIgnore",
+        {
+            demandOption: false,
+            describe:     "Ignore paths that match the specified regex"
         }
     )
     .wrap(80)
@@ -148,6 +170,10 @@ function getConfiguration(): Result<IFindGrepConfig, string>
     {
         return failedResult(`Path regex not specified.`);
     }
+
+    const pathIgnores = toArray<string>(argv.pathIgnore)
+    .map((curIgnoreStr) => new RegExp(curIgnoreStr, "i"));
+
     const textRegex = argv._[1];
     if (!textRegex)
     {
@@ -155,8 +181,9 @@ function getConfiguration(): Result<IFindGrepConfig, string>
     }
 
     return succeededResult({
-        recurse:   argv.recurse,
-        pathRegex: pathRegex,
-        textRegex: textRegex
+        recurse:     argv.recurse,
+        pathRegex:   pathRegex,
+        pathIgnores: pathIgnores,
+        textRegex:   textRegex
     });
 }
