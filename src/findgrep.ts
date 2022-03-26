@@ -66,8 +66,12 @@ async function findGrepMain(): Promise<number>
     {
         if (fileOrDir instanceof Directory)
         {
-            // TODO: If the directory's path matches any of the path ignores, return false.
-            return Promise.resolve(configResult.value.recurse);
+            // As a performance optimization, if the directory matches any of
+            // the pathIgnore patterns, do not recurse into it.  Otherwise,
+            // recurse into it as the user has specified.
+            return matchesAny(fileOrDir.toString(), configResult.value.pathIgnores) ?
+                false :
+                configResult.value.recurse;
         }
 
         // See if the file's path matches the path regular expression.  If not,
@@ -75,13 +79,13 @@ async function findGrepMain(): Promise<number>
         const [numPathMatches, highlightedPath] = highlightMatches(fileOrDir.toString(), pathRegex, fileMatchStyle);
         if (numPathMatches === 0)
         {
-            return Promise.resolve(false); // Return value does not matter when processing files.
+            return false; // Return value does not matter when processing files.
         }
 
         // If the file's path should be ignored, we are done.
         if (matchesAny(fileOrDir.toString(), configResult.value.pathIgnores))
         {
-            return Promise.resolve(false); // Return value does not matter when processing files.
+            return false; // Return value does not matter when processing files.
         }
 
         const fileText = fileStyle(highlightedPath);
