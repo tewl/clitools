@@ -2,14 +2,8 @@
 //
 // Usage: node.exe findgrep.js
 //
-// It is recommended that you use the %USERPROFILE% environment variable to
-// specify an output directory within your user directory.
-//
-// Example:
-// node.exe %USERPROFILE%\dev\path\to\windowsSpotlightImages.js %USERPROFILE%\blah\blah\Windows_Spotlight
-//
-// Note:  If this script is run using Windows Task Scheduler, that task will
-// have to be updated whenever your password changes.
+// Running this script using ts-node:
+// .\node_modules\.bin\ts-node .\src\findgrep.ts --recurse --pathIgnore "node_modules" --pathIgnore "package-lock" "/\.json$/i" "/depend/i"
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -19,8 +13,11 @@ import * as yargs from "yargs";
 import { toArray } from "./depot/arrayHelpers";
 import { highlightMatches } from "./depot/chalkHelpers";
 import { Directory } from "./depot/directory";
-import { matchesAny } from "./depot/regexpHelpers";
-import { failed, failedResult, Result, succeededResult } from "./depot/result";
+import { matchesAny, strToRegExp } from "./depot/regexpHelpers";
+import { failed, Result, succeededResult } from "./depot/result";
+import { bindResult, boolToResult, mapWhileSuccessful } from "./depot/resultHelpers";
+import _ = require("lodash");
+import { pipe } from "./depot/pipe";
 
 
 const fileStyle = chalk.cyan;
@@ -61,14 +58,15 @@ async function findGrepMain(): Promise<number>
     console.log(`recurse:    ${configResult.value.recurse}`);
     console.log();
 
-    const pathRegex = new RegExp(configResult.value.pathRegex, "gi");
-    const textRegex = new RegExp(configResult.value.textRegex, "gi");
+    const pathRegex = configResult.value.pathRegex;
+    const textRegex = configResult.value.textRegex;
 
     const cwd = new Directory(".");
     await cwd.walk(async (fileOrDir): Promise<boolean> =>
     {
         if (fileOrDir instanceof Directory)
         {
+            // TODO: If the directory's path matches any of the path ignores, return false.
             return Promise.resolve(configResult.value.recurse);
         }
 
@@ -81,7 +79,8 @@ async function findGrepMain(): Promise<number>
         }
 
         // If the file's path should be ignored, we are done.
-        if (matchesAny(fileOrDir.toString(), configResult.value.pathIgnores)) {
+        if (matchesAny(fileOrDir.toString(), configResult.value.pathIgnores))
+        {
             return Promise.resolve(false); // Return value does not matter when processing files.
         }
 
@@ -122,9 +121,9 @@ async function findGrepMain(): Promise<number>
 interface IFindGrepConfig
 {
     recurse: boolean;
-    pathRegex: string;
+    pathRegex: RegExp;
+    textRegex: RegExp;
     pathIgnores: Array<RegExp>;
-    textRegex: string;
 }
 
 
@@ -162,28 +161,42 @@ function getConfiguration(): Result<IFindGrepConfig, string>
     .wrap(80)
     .argv;
 
-    //
-    // Get the command from the command line arguments.
-    //
-    const pathRegex = argv._[0];
-    if (!pathRegex)
+    // Get the path regex positional argument.
+    const pathRegexResult = pipe(
+        succeededResult(argv._[0]),
+        (r) => bindResult((v) => boolToResult(_.isString(v), v, "Path regex not specified."), r),
+        (r) => bindResult(strToRegExp, r)
+    );
+    if (failed(pathRegexResult))
     {
-        return failedResult(`Path regex not specified.`);
+        return pathRegexResult;
     }
 
-    const pathIgnores = toArray<string>(argv.pathIgnore)
-    .map((curIgnoreStr) => new RegExp(curIgnoreStr, "i"));
-
-    const textRegex = argv._[1];
-    if (!textRegex)
+    // Get the text regex positional argument.
+    const textRegexResult = pipe(
+        succeededResult(argv._[1]),
+        (r) => bindResult((v) => boolToResult(_.isString(v), v, "Text regex not specified."), r),
+        (r) => bindResult(strToRegExp, r)
+    );
+    if (failed(textRegexResult))
     {
-        return failedResult(`Text regex not specified.`);
+        return textRegexResult;
+    }
+
+    // Get the path ignore regexes from the --pathIgnore arguments.
+    const pathIgnoresResult = pipe(
+        succeededResult(toArray<string>(argv.pathIgnore)),
+        (r) => bindResult((v) => mapWhileSuccessful(v, strToRegExp), r)
+    );
+    if (failed(pathIgnoresResult))
+    {
+        return pathIgnoresResult;
     }
 
     return succeededResult({
         recurse:     argv.recurse,
-        pathRegex:   pathRegex,
-        pathIgnores: pathIgnores,
-        textRegex:   textRegex
+        pathRegex:   pathRegexResult.value,
+        pathIgnores: pathIgnoresResult.value,
+        textRegex:   textRegexResult.value
     });
 }
