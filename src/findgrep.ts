@@ -169,6 +169,8 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
         lineStyle:      chalk.yellow,
         textMatchStyle: chalk.inverse
     };
+    let numFiles = 0;
+    let totalMatches = 0;
 
     const cwd = new Directory(".");
     await cwd.walk(async (fileOrDir): Promise<boolean> =>
@@ -194,7 +196,7 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
         }
 
         const fileText = styles.fileStyle(highlighedPath);
-        let fileProducedOutput = false;
+        let matchesFoundInCurrentFile = false;
 
         // Read the file line by line and output lines that match the text regex.
         await fileOrDir.readLines((lineText, lineNum) =>
@@ -206,13 +208,19 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
             );
             if (numMatches > 0)
             {
+                if (!matchesFoundInCurrentFile)
+                {
+                    numFiles += 1;
+                }
+                totalMatches += numMatches;
+
                 const lineNumText = styles.lineStyle(`:${lineNum}`);
                 console.log(fileText + lineNumText + " - " + highlightedText);
-                fileProducedOutput = true;
+                matchesFoundInCurrentFile = true;
             }
         });
 
-        if (fileProducedOutput)
+        if (matchesFoundInCurrentFile)
         {
             // The current file produced output.  Leave a blank line after it.
             console.log();
@@ -220,6 +228,12 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
 
         return shouldRecurse;
     });
+
+    console.log([
+        "",
+        `Matches:  ${totalMatches}`,
+        `Files:    ${numFiles}`
+    ].join(os.EOL));
 
     return 0;
 }
@@ -229,6 +243,9 @@ async function doFilesystemSearch(config: IFindGrepConfig): Promise<number>
     const styles = {
         matchStyle: chalk.inverse
     };
+
+    let numDirsFound = 0;
+    let numFilesFound = 0;
 
     const cwd = new Directory(".");
     await cwd.walk((fileOrDir): boolean =>
@@ -253,11 +270,27 @@ async function doFilesystemSearch(config: IFindGrepConfig): Promise<number>
         if (numPathMatches > 0)
         {
             console.log(highlighted);
+
+            if (fileOrDir instanceof Directory)
+            {
+                numDirsFound += 1;
+            }
+            else
+            {
+                numFilesFound += 1;
+            }
         }
 
         return shouldRecurse;
 
     });
+
+    console.log([
+        "",
+        `Files found:       ${numFilesFound}`,
+        `Directories found: ${numDirsFound}`,
+        `Total:             ${numFilesFound + numDirsFound}`
+    ].join(os.EOL));
 
     return 0;
 }
