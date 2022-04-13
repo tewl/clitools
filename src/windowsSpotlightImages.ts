@@ -22,34 +22,27 @@ import {mapAsync, filterAsync, getTimerPromise, removeAsync} from "./depot/promi
 import {FileComparer} from "./depot/diffDirectories";
 
 
-if (require.main === module)
-{
+if (require.main === module) {
     windowsSpotlightImagesMain()
-    .then((exitCode) =>
-    {
-        if (exitCode !== 0)
-        {
+    .then((exitCode) => {
+        if (exitCode !== 0) {
             process.exit(exitCode);
         }
     })
-    .catch((err) =>
-    {
+    .catch((err) => {
         console.error(JSON.stringify(err, undefined, 4));
         process.exit(-1);
     });
 }
 
 
-async function windowsSpotlightImagesMain(): Promise<number>
-{
+async function windowsSpotlightImagesMain(): Promise<number> {
     const outDirStr = process.argv[2];
     const outDir = new Directory(outDirStr);
-    if (outDir.existsSync())
-    {
+    if (outDir.existsSync()) {
         console.log(`Using existing output directory '${outDir.toString()}'`);
     }
-    else
-    {
+    else {
         outDir.ensureExistsSync();
         console.log(`Created output directory '${outDir.toString()}'.`);
     }
@@ -68,20 +61,17 @@ async function windowsSpotlightImagesMain(): Promise<number>
 
     // Keep only the files greater than a certain size.  This gets rid of icons
     // that are also kept in this directory.
-    assetFiles = await filterAsync(assetFiles, async (curFile) =>
-    {
+    assetFiles = await filterAsync(assetFiles, async (curFile) => {
         const stats = (await curFile.exists())!;
         return stats.size > 200 * 1024;
     });
 
-    const fileComparers = _.map(assetFiles, (curSrcFile) =>
-    {
+    const fileComparers = _.map(assetFiles, (curSrcFile) => {
         const destFile = new File(outDir, curSrcFile.baseName + ".jpg");
         return FileComparer.create(curSrcFile, destFile);
     });
 
-    const removed = await removeAsync(fileComparers, async (curFileComparer) =>
-    {
+    const removed = await removeAsync(fileComparers, async (curFileComparer) => {
         const areIdentical = await curFileComparer.bothExistAndIdentical();
         return areIdentical;
     });
@@ -89,8 +79,7 @@ async function windowsSpotlightImagesMain(): Promise<number>
     console.log(`Identical files: ${removed.length}`);
     console.log(`New files:       ${fileComparers.length}`);
 
-    const __destFiles = await mapAsync(fileComparers, (curFileComparer) =>
-    {
+    const __destFiles = await mapAsync(fileComparers, (curFileComparer) => {
         return curFileComparer.leftFile.copy(curFileComparer.rightFile);
     });
 

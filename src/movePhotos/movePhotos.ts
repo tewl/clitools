@@ -11,21 +11,17 @@ import {ConfidenceLevel} from "./datestampDeduction";
 
 
 
-if (require.main === module)
-{
+if (require.main === module) {
     movePhotosMain()
-    .then((exitCode) =>
-    {
-        if (exitCode !== 0)
-        {
+    .then((exitCode) => {
+        if (exitCode !== 0) {
             process.exit(exitCode);
         }
     });
 }
 
 
-async function movePhotosMain(): Promise<number>
-{
+async function movePhotosMain(): Promise<number> {
     const srcDir = new Directory("\\\\floyd\\chandratmp");
     const destDir = new Directory("\\\\floyd\\photo");
     console.log(`srcDir: ${srcDir}\ndestDir: ${destDir}`);
@@ -44,8 +40,7 @@ async function movePhotosMain(): Promise<number>
     // the various datestamp strategies.
     //
     const strategies = [datestampStrategyFilePath];
-    const srcAndDeductionAggregates = await zipWithAsyncValues(srcFiles, async (curSrcFile) =>
-    {
+    const srcAndDeductionAggregates = await zipWithAsyncValues(srcFiles, async (curSrcFile) => {
         return applyDatestampStrategies(curSrcFile, destDir, strategies);
     });
 
@@ -54,8 +49,7 @@ async function movePhotosMain(): Promise<number>
 
 
 
-    const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) =>
-    {
+    const highConfidence = _.remove(srcAndDeductionAggregates, (curSrcAndDeductionAggregate) => {
         const highestConfidenceDeductions = curSrcAndDeductionAggregate[1].getHighestConfidenceDeductions();
         return highestConfidenceDeductions.length > 0 &&
                !curSrcAndDeductionAggregate[1].isConflicted() &&
@@ -68,8 +62,7 @@ async function movePhotosMain(): Promise<number>
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    const __fileComparers = _.map(srcFiles, (curSrcFile) =>
-    {
+    const __fileComparers = _.map(srcFiles, (curSrcFile) => {
         return FileComparer.create(
             curSrcFile,
             new File(destDir, path.relative(srcDir.toString(), curSrcFile.toString()))
@@ -117,8 +110,7 @@ async function movePhotosMain(): Promise<number>
  * @param srcFiles - The source files to be processed.
  * @return A new array containing only the wanted files.
  */
-async function deleteUnwantedSourceFiles(srcFiles: Array<File>): Promise<Array<File>>
-{
+async function deleteUnwantedSourceFiles(srcFiles: Array<File>): Promise<Array<File>> {
     const unwantedPatterns = [
         /Thumbs\.db$/i,
         /\.DS_Store$/i
@@ -143,10 +135,8 @@ async function deleteUnwantedSourceFiles(srcFiles: Array<File>): Promise<Array<F
  * @return A promise that resolves to true when the user confirms the file
  * deletions.  A promise that resolves to false when the user cancels.
  */
-async function promptAndDeleteFiles(files: Array<File>, prompt: string): Promise<boolean>
-{
-    if (files.length === 0)
-    {
+async function promptAndDeleteFiles(files: Array<File>, prompt: string): Promise<boolean> {
+    if (files.length === 0) {
         return true;
     }
 
@@ -156,13 +146,11 @@ async function promptAndDeleteFiles(files: Array<File>, prompt: string): Promise
     const enhancedPrompt = `${prompt} (${files.length} files)`;
 
     // Ask the user if they wish to delete the files.
-    try
-    {
+    try {
         await promptToContinue(enhancedPrompt, true);
 
     }
-    catch (error)
-    {
+    catch (error) {
         // The user did not confirm the deletion.  Do nothing.
         return false;
     }

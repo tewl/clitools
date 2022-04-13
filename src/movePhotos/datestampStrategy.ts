@@ -22,13 +22,11 @@ type IDatestampStrategy = (source: File, destDir: Directory) => Promise<Datestam
 const dateRegex = /(?<date>(?<year>(?:20|19)\d\d)(?:[-_])?(?<month>[01]\d)(?:[-_])?(?<day>[0123]\d))/;
 
 
-export function datestampStrategyFilePath(source: File, destDir: Directory): Promise<DatestampDeduction>
-{
+export function datestampStrategyFilePath(source: File, destDir: Directory): Promise<DatestampDeduction> {
     const absPath = source.absPath();
 
     const matchResult = absPath.match(dateRegex);
-    if (!matchResult)
-    {
+    if (!matchResult) {
         return Promise.resolve({
             confidence:  ConfidenceLevel.NoClue,
             explanation: `The file path '${absPath}' does not contain a datestamp.`
@@ -41,8 +39,7 @@ export function datestampStrategyFilePath(source: File, destDir: Directory): Pro
     const dayStr = matchResult.groups!.day;
 
     const datestampResult = Datestamp.fromStrings(yearStr, monthStr, dayStr);
-    if (failed(datestampResult))
-    {
+    if (failed(datestampResult)) {
         throw new Error(`Failed to instantiate Datestamp: ${datestampResult.error}`);
     }
 
@@ -61,13 +58,11 @@ export async function applyDatestampStrategies(
     source: File,
     destDir: Directory,
     strategies: Array<IDatestampStrategy>
-): Promise<DatestampDeductionAggregate>
-{
+): Promise<DatestampDeductionAggregate> {
     const allDeductions = await mapAsync(strategies, (curStrategy) => curStrategy(source, destDir));
 
     const aggregateDeduction = new DatestampDeductionAggregate();
-    for (const curResult of allDeductions)
-    {
+    for (const curResult of allDeductions) {
         aggregateDeduction.push(curResult);
     }
     return aggregateDeduction;

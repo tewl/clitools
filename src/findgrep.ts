@@ -21,29 +21,23 @@ import { pipe } from "./depot/pipe";
 import { boolToOption, isNone, isSome, mapSome, Option } from "./depot/option";
 
 
-if (require.main === module)
-{
+if (require.main === module) {
     findGrepMain()
-    .then((exitCode) =>
-    {
-        if (exitCode !== 0)
-        {
+    .then((exitCode) => {
+        if (exitCode !== 0) {
             process.exit(exitCode);
         }
     })
-    .catch((err: Error) =>
-    {
+    .catch((err: Error) => {
         console.error(err.message);
         process.exit(-1);
     });
 }
 
 
-async function findGrepMain(): Promise<number>
-{
+async function findGrepMain(): Promise<number> {
     const configResult = getConfiguration();
-    if (failed(configResult))
-    {
+    if (failed(configResult)) {
         throw new Error(configResult.error);
     }
 
@@ -56,12 +50,10 @@ async function findGrepMain(): Promise<number>
     console.log();
 
 
-    if (isNone(config.textRegex))
-    {
+    if (isNone(config.textRegex)) {
         return doFilesystemSearch(config);
     }
-    else
-    {
+    else {
         return doTextSearch(config);
     }
 }
@@ -70,8 +62,7 @@ async function findGrepMain(): Promise<number>
 /**
  * Configuration options for this script.
  */
-interface IFindGrepConfig
-{
+interface IFindGrepConfig {
     recurse: boolean;
     pathRegex: RegExp;
     textRegex: Option<RegExp>;
@@ -84,8 +75,7 @@ interface IFindGrepConfig
  * form.
  * @return The configuration parameters for this script
  */
-function getConfiguration(): Result<IFindGrepConfig, string>
-{
+function getConfiguration(): Result<IFindGrepConfig, string> {
     const argv = yargs
     .usage(
         [
@@ -126,8 +116,7 @@ function getConfiguration(): Result<IFindGrepConfig, string>
         (r) => bindResult((v) => boolToResult(_.isString(v), v, "Path regex not specified."), r),
         (r) => bindResult(strToRegExp, r)
     );
-    if (failed(pathRegexResult))
-    {
+    if (failed(pathRegexResult)) {
         return pathRegexResult;
     }
 
@@ -137,8 +126,7 @@ function getConfiguration(): Result<IFindGrepConfig, string>
         (str) => boolToOption(str, str),
         (strOpt) => mapSome(strToRegExp, strOpt)
     );
-    if (isSome(textRegexOptResult) && failed(textRegexOptResult.value))
-    {
+    if (isSome(textRegexOptResult) && failed(textRegexOptResult.value)) {
         return textRegexOptResult.value;
     }
 
@@ -147,8 +135,7 @@ function getConfiguration(): Result<IFindGrepConfig, string>
         succeededResult(toArray<string>(argv.pathIgnore)),
         (r) => bindResult((v) => mapWhileSuccessful(v, strToRegExp), r)
     );
-    if (failed(pathIgnoresResult))
-    {
+    if (failed(pathIgnoresResult)) {
         return pathIgnoresResult;
     }
 
@@ -161,8 +148,7 @@ function getConfiguration(): Result<IFindGrepConfig, string>
 }
 
 
-async function doTextSearch(config: IFindGrepConfig): Promise<number>
-{
+async function doTextSearch(config: IFindGrepConfig): Promise<number> {
     const styles = {
         fileStyle:      chalk.cyan,
         fileMatchStyle: chalk.inverse,
@@ -173,16 +159,14 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
     let totalMatches = 0;
 
     const cwd = new Directory(".");
-    await cwd.walk(async (fileOrDir): Promise<boolean> =>
-    {
+    await cwd.walk(async (fileOrDir): Promise<boolean> => {
         const path = fileOrDir.toString();
         const shouldBeIgnored = matchesAny(path, config.pathIgnores);
         // If the current item has been explicitly ignored, do not recurse.
         // Otherwise, recurse as the user has specified.
         const shouldRecurse = shouldBeIgnored ? false : config.recurse;
 
-        if (shouldBeIgnored || (fileOrDir instanceof Directory))
-        {
+        if (shouldBeIgnored || (fileOrDir instanceof Directory)) {
             return shouldRecurse;
         }
 
@@ -190,8 +174,7 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
             path, config.pathRegex, styles.fileMatchStyle
         );
 
-        if (numPathMatches === 0)
-        {
+        if (numPathMatches === 0) {
             return shouldRecurse;
         }
 
@@ -199,17 +182,14 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
         let matchesFoundInCurrentFile = false;
 
         // Read the file line by line and output lines that match the text regex.
-        await fileOrDir.readLines((lineText, lineNum) =>
-        {
+        await fileOrDir.readLines((lineText, lineNum) => {
             const [numMatches, highlightedText] = highlightMatches(
                 lineText,
                 config.textRegex.value!,
                 styles.textMatchStyle
             );
-            if (numMatches > 0)
-            {
-                if (!matchesFoundInCurrentFile)
-                {
+            if (numMatches > 0) {
+                if (!matchesFoundInCurrentFile) {
                     numFiles += 1;
                 }
                 totalMatches += numMatches;
@@ -220,8 +200,7 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
             }
         });
 
-        if (matchesFoundInCurrentFile)
-        {
+        if (matchesFoundInCurrentFile) {
             // The current file produced output.  Leave a blank line after it.
             console.log();
         }
@@ -238,8 +217,7 @@ async function doTextSearch(config: IFindGrepConfig): Promise<number>
     return 0;
 }
 
-async function doFilesystemSearch(config: IFindGrepConfig): Promise<number>
-{
+async function doFilesystemSearch(config: IFindGrepConfig): Promise<number> {
     const styles = {
         matchStyle: chalk.inverse
     };
@@ -248,16 +226,14 @@ async function doFilesystemSearch(config: IFindGrepConfig): Promise<number>
     let numFilesFound = 0;
 
     const cwd = new Directory(".");
-    await cwd.walk((fileOrDir): boolean =>
-    {
+    await cwd.walk((fileOrDir): boolean => {
         const path = fileOrDir.toString();
         const shouldBeIgnored = matchesAny(path, config.pathIgnores);
         // If the current item has been explicitly ignored, do not recurse.
         // Otherwise, recurse as the user has specified.
         const shouldRecurse = shouldBeIgnored ? false : config.recurse;
 
-        if (shouldBeIgnored)
-        {
+        if (shouldBeIgnored) {
             return shouldRecurse;
         }
 
@@ -267,16 +243,13 @@ async function doFilesystemSearch(config: IFindGrepConfig): Promise<number>
             styles.matchStyle
         );
 
-        if (numPathMatches > 0)
-        {
+        if (numPathMatches > 0) {
             console.log(highlighted);
 
-            if (fileOrDir instanceof Directory)
-            {
+            if (fileOrDir instanceof Directory) {
                 numDirsFound += 1;
             }
-            else
-            {
+            else {
                 numFilesFound += 1;
             }
         }

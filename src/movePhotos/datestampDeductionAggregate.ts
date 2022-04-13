@@ -7,40 +7,34 @@ import { DatestampDeduction,
          ConfidenceLevel } from "./datestampDeduction";
 
 
-export class DatestampDeductionAggregate
-{
+export class DatestampDeductionAggregate {
     // #region Instance Data Members
     private readonly _deductions: Array<DatestampDeduction> = [];
     // #endregion
 
 
-    public get deductions(): ReadonlyArray<DatestampDeduction>
-    {
+    public get deductions(): ReadonlyArray<DatestampDeduction> {
         return this._deductions;
     }
 
 
-    public push(deduction: DatestampDeduction): void
-    {
+    public push(deduction: DatestampDeduction): void {
         this._deductions.push(deduction);
     }
 
 
-    public hasSuccessfulDeductions(): boolean
-    {
+    public hasSuccessfulDeductions(): boolean {
         const hasSuccessfulDeductions = _.some(this._deductions, isSuccesfulDatestampDeduction);
         return hasSuccessfulDeductions;
     }
 
 
-    public getSuccessfulDeductions(): Array<IDatestampDeductionSuccess>
-    {
+    public getSuccessfulDeductions(): Array<IDatestampDeductionSuccess> {
         const successfulDeductions = _.filter(this._deductions, isSuccesfulDatestampDeduction);
         return successfulDeductions;
     }
 
-    public getFailedDeductionExplanations(): Array<string>
-    {
+    public getFailedDeductionExplanations(): Array<string> {
         const explanations = _.chain(this._deductions)
         .filter(isFailureDatestampDeduction)
         .map((curFailedDeduction) => curFailedDeduction.explanation)
@@ -50,11 +44,9 @@ export class DatestampDeductionAggregate
     }
 
 
-    public isConflicted(): boolean
-    {
+    public isConflicted(): boolean {
         const successfulDeductions = this.getSuccessfulDeductions();
-        if (successfulDeductions.length === 0)
-        {
+        if (successfulDeductions.length === 0) {
             throw new Error("isConflicted() called with no successful deductions. Test to see if this aggregate is successful first.");
         }
 
@@ -71,11 +63,9 @@ export class DatestampDeductionAggregate
      * Gets this aggregate's highest confidence deductions.
      * @return Description
      */
-    public getHighestConfidenceDeductions(): Array<IDatestampDeductionSuccess>
-    {
+    public getHighestConfidenceDeductions(): Array<IDatestampDeductionSuccess> {
         const successfulDeductions = this.getSuccessfulDeductions();
-        if (successfulDeductions.length === 0)
-        {
+        if (successfulDeductions.length === 0) {
             return [];
         }
 
@@ -83,8 +73,7 @@ export class DatestampDeductionAggregate
 
         const highestConfidenceLevelFound = _.find(
             [ConfidenceLevel.High, ConfidenceLevel.Medium, ConfidenceLevel.Low],
-            (curConfidenceLevel) =>
-            {
+            (curConfidenceLevel) => {
                 const deductions = confidenceGroups[curConfidenceLevel];
                 return deductions && deductions.length > 0;
             }
