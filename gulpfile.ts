@@ -31,6 +31,7 @@ const scripts: Array<string> = [
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
     path.join("src", "findgrep.js"),
+    path.join("src", "unique.js"),
     path.join("src", "movePhotos", "movePhotos.js")
 ];
 
