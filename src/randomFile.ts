@@ -80,6 +80,7 @@ async function main(): Promise<number> {
 
         if (config.show) {
             // TODO: Create a show() method on File.
+            // TODO: Create a show() method on Directory.
             spawn("explorer.exe", ["/select,", randomFile.absPath()]);
         }
 
