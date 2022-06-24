@@ -1,9 +1,7 @@
 import yargs from "yargs";
 import { BufBuilder } from "./depot/bufBuilder";
 import { BufReader } from "./depot/bufReader";
-import { Directory } from "./depot/directory";
 import { sInt8Min, uInt8Max } from "./depot/numericRange";
-import { getOs, OperatingSystem } from "./depot/os";
 
 
 if (require.main === module) {
