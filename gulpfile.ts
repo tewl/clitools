@@ -34,6 +34,7 @@ const scripts: Array<string> = [
     path.join("src", "unique.js"),
     path.join("src", "cdata.js"),
     path.join("src", "randomFile.js"),
+    path.join("src", "convert.js"),
     path.join("src", "movePhotos", "movePhotos.js")
 ];
 
