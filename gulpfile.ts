@@ -24,17 +24,16 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // These scripts will be made executable.
 //
 const scripts: Array<string> = [
+    path.join("src", "convert.js"),
     path.join("src", "copywrite.js"),
     path.join("src", "evaluate.js"),
+    path.join("src", "findgrep.js"),
     path.join("src", "hr.js"),
     path.join("src", "mergedBranches.js"),
+    path.join("src", "randomFile.js"),
+    path.join("src", "unique.js"),
     path.join("src", "watch.js"),
     path.join("src", "windowsSpotlightImages.js"),
-    path.join("src", "findgrep.js"),
-    path.join("src", "unique.js"),
-    path.join("src", "cdata.js"),
-    path.join("src", "randomFile.js"),
-    path.join("src", "convert.js"),
     path.join("src", "movePhotos", "movePhotos.js")
 ];
 
