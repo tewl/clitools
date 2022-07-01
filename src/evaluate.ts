@@ -1,6 +1,5 @@
 import * as yargs from "yargs";
 import { evaluate } from "./depot/expression";
-import { succeeded } from "./depot/result";
 
 
 const argv = yargs
@@ -18,7 +17,7 @@ const argv = yargs
 const expression = argv._[0];
 const result = evaluate(expression);
 
-if (succeeded(result)) {
+if (result.succeeded) {
     const answer = `${expression} = ${result.value.stringRepresentations().join(" = ")}`;
     console.log(answer);
 }

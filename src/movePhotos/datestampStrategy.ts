@@ -1,7 +1,6 @@
 import { File } from "../depot/file";
 import { Directory } from "../depot/directory";
 import { mapAsync } from "../depot/promiseHelpers";
-import { failed } from "../depot/result";
 import { Datestamp } from "./datestamp";
 import { ConfidenceLevel, DatestampDeduction} from "./datestampDeduction";
 import { DatestampDeductionAggregate } from "./datestampDeductionAggregate";
@@ -39,7 +38,7 @@ export function datestampStrategyFilePath(source: File, destDir: Directory): Pro
     const dayStr = matchResult.groups!.day;
 
     const datestampResult = Datestamp.fromStrings(yearStr, monthStr, dayStr);
-    if (failed(datestampResult)) {
+    if (datestampResult.failed) {
         throw new Error(`Failed to instantiate Datestamp: ${datestampResult.error}`);
     }
 

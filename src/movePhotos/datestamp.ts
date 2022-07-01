@@ -1,4 +1,4 @@
-import {Result, succeededResult, failedResult} from "../depot/result";
+import {FailedResult, Result, SucceededResult } from "../depot/result";
 import {padLeft} from "../depot/stringHelpers";
 
 
@@ -20,15 +20,15 @@ export class Datestamp {
         const day = parseInt(dayStr, 10);
 
         if (Number.isNaN(year)) {
-            return failedResult(`${yearStr} is not a valid year string.`);
+            return new FailedResult(`${yearStr} is not a valid year string.`);
         }
 
         if (Number.isNaN(month)) {
-            return failedResult(`${monthStr} is not a valid year string.`);
+            return new FailedResult(`${monthStr} is not a valid year string.`);
         }
 
         if (Number.isNaN(day)) {
-            return failedResult(`${dayStr} is not a valid year string.`);
+            return new FailedResult(`${dayStr} is not a valid year string.`);
         }
 
         //
@@ -37,18 +37,18 @@ export class Datestamp {
         const now = new Date();
         const curYear = now.getFullYear();
         if (year < curYear - 100 || year > curYear) {
-            return failedResult(`${year} is not a valid year.`);
+            return new FailedResult(`${year} is not a valid year.`);
         }
 
         if (month < 1 || month > 12) {
-            return failedResult(`${month} is not a valid month.`);
+            return new FailedResult(`${month} is not a valid month.`);
         }
 
         if (day < 1 || day > 31) {
-            return failedResult(`${day} is not a valid day.`);
+            return new FailedResult(`${day} is not a valid day.`);
         }
 
-        return succeededResult(new Datestamp(year, month, day));
+        return new SucceededResult(new Datestamp(year, month, day));
     }
 
 

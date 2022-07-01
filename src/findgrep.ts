@@ -14,8 +14,7 @@ import { toArray } from "./depot/arrayHelpers";
 import { highlightMatches } from "./depot/chalkHelpers";
 import { Directory } from "./depot/directory";
 import { matchesAny, strToRegExp } from "./depot/regexpHelpers";
-import { failed, Result, succeededResult } from "./depot/result";
-import { bindResult, boolToResult, mapWhileSuccessful } from "./depot/resultHelpers";
+import { Result, SucceededResult } from "./depot/result";
 import _ = require("lodash");
 import { pipe } from "./depot/pipe";
 import { boolToOption, isNone, isSome, mapSome, Option } from "./depot/option";
@@ -37,7 +36,7 @@ if (require.main === module) {
 
 async function findGrepMain(): Promise<number> {
     const configResult = getConfiguration();
-    if (failed(configResult)) {
+    if (configResult.failed) {
         throw new Error(configResult.error);
     }
 
@@ -112,11 +111,11 @@ function getConfiguration(): Result<IFindGrepConfig, string> {
 
     // Get the path regex positional argument.
     const pathRegexResult = pipe(
-        succeededResult(argv._[0]),
-        (r) => bindResult((v) => boolToResult(_.isString(v), v, "Path regex not specified."), r),
-        (r) => bindResult(strToRegExp, r)
+        new SucceededResult(argv._[0]),
+        (r) => Result.bind((v) => Result.fromBool(_.isString(v), v, "Path regex not specified."), r),
+        (r) => Result.bind(strToRegExp, r)
     );
-    if (failed(pathRegexResult)) {
+    if (pathRegexResult.failed) {
         return pathRegexResult;
     }
 
@@ -126,20 +125,20 @@ function getConfiguration(): Result<IFindGrepConfig, string> {
         (str) => boolToOption(str, str),
         (strOpt) => mapSome(strToRegExp, strOpt)
     );
-    if (isSome(textRegexOptResult) && failed(textRegexOptResult.value)) {
+    if (isSome(textRegexOptResult) && textRegexOptResult.value.failed) {
         return textRegexOptResult.value;
     }
 
     // Get the path ignore regexes from the --pathIgnore arguments.
     const pathIgnoresResult = pipe(
-        succeededResult(toArray<string>(argv.pathIgnore)),
-        (r) => bindResult((v) => mapWhileSuccessful(v, strToRegExp), r)
+        new SucceededResult(toArray<string>(argv.pathIgnore)),
+        (r) => Result.bind((v) => Result.mapWhileSuccessful(v, strToRegExp), r)
     );
-    if (failed(pathIgnoresResult)) {
+    if (pathIgnoresResult.failed) {
         return pathIgnoresResult;
     }
 
-    return succeededResult({
+    return new SucceededResult({
         recurse:     argv.recurse,
         pathRegex:   pathRegexResult.value,
         pathIgnores: pathIgnoresResult.value,

@@ -2,7 +2,7 @@ import { Directory } from "./depot/directory";
 import { GitBranch } from "./depot/gitBranch";
 import { GitRepo } from "./depot/gitRepo";
 import { IChoiceString, promptForChoice } from "./depot/prompts";
-import { failed, succeeded } from "./depot/result";
+
 
 if (require.main === module) {
     main()
@@ -27,21 +27,21 @@ async function main(): Promise<number> {
     // Get a repo representing the current working directory.
     const cwd = new Directory(process.cwd());
     const repoResult = await GitRepo.fromDirectory(cwd);
-    if (failed(repoResult)) {
+    if (repoResult.failed) {
         throw new Error(repoResult.error);
     }
     const repo = repoResult.value;
 
     // Get the target branch.
     const targetBranchResult = await GitBranch.create(repo, destBranch);
-    if (failed(targetBranchResult)) {
+    if (targetBranchResult.failed) {
         const errMsg = `Failed to find 'develop' branch.  ${targetBranchResult.error}`;
         throw new Error(errMsg);
     }
 
     // Find the branches that have been merged into the target branch.
     const mergedBranchesResult = await repo.getMergedBranches(targetBranchResult.value, true, false);
-    if (failed(mergedBranchesResult)) {
+    if (mergedBranchesResult.failed) {
         const errMsg = `Failed to get merged branches.  ${mergedBranchesResult.error}`;
         throw new Error(errMsg);
     }
@@ -54,7 +54,7 @@ async function main(): Promise<number> {
         const branchesToDelete = await promptToDeleteBranch(curLocalBranch);
         for (const branchToDelete of branchesToDelete) {
             const deleteResult = await branchToDelete.repo.deleteBranch(branchToDelete, true);
-            if (succeeded(deleteResult)) {
+            if (deleteResult.succeeded) {
                 console.log(`Deleted ${branchToDelete}.`);
             }
             else {
