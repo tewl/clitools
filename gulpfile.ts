@@ -25,6 +25,7 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // These scripts will be made executable.
 //
 const scripts: Array<string> = [
+    path.join("src", "copywrite.js"),
     path.join("src", "evaluate.js"),
     path.join("src", "hr.js"),
     path.join("src", "mergedBranches.js"),
