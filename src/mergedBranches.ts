@@ -12,7 +12,7 @@ if (require.main === module) {
         }
     })
     .catch((err) => {
-        console.error(err.toString());
+        console.error(err.message);
         process.exit(-1);
     });
 }
