@@ -29,6 +29,7 @@ const scripts: Array<string> = [
     path.join("src", "evaluate.js"),
     path.join("src", "findgrep.js"),
     path.join("src", "hr.js"),
+    path.join("src", "localWork.js"),
     path.join("src", "mergedBranches.js"),
     path.join("src", "randomFile.js"),
     path.join("src", "unique.js"),
