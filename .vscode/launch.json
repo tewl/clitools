@@ -17,10 +17,33 @@
             "args": [
                 "src/findgrep.ts",
                 "--recurse",
-                "--pathIgnore", "node_modules",
-                "--pathIgnore", "package-lock",
+                "--pathIgnore",
+                "node_modules",
+                "--pathIgnore",
+                "package-lock",
                 "/\\.json$/i",
                 "/depend/i"
+            ],
+            "cwd": "${workspaceRoot}",
+            "internalConsoleOptions": "openOnSessionStart",
+            "skipFiles": [
+                "<node_internals>/**",
+                "node_modules/**"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch localWork",
+            "runtimeExecutable": "node",
+            "runtimeArgs": [
+                "--nolazy",
+                "-r",
+                "ts-node/register/transpile-only"
+            ],
+            "args": [
+                "src/localWork.ts",
+                "c:\\tmp_foo"
             ],
             "cwd": "${workspaceRoot}",
             "internalConsoleOptions": "openOnSessionStart",
@@ -31,7 +54,4 @@
         }
     ]
 }
-
-
-
 // .\node_modules\.bin\ts-node .\src\findgrep.ts --recurse --pathIgnore "node_modules" --pathIgnore "package-lock" "/\.json$/i" "/depend/i"

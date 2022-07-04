@@ -1,4 +1,5 @@
 import * as os from "os";
+import * as yargs from "yargs";
 import { Directory } from "./depot/directory";
 import { File } from "./depot/file";
 import { GitRepo } from "./depot/gitRepo";
@@ -21,9 +22,20 @@ if (require.main === module) {
     });
 }
 
+
+interface IConfig {
+    dir: Directory
+}
+
+
 async function main(): Promise<Result<undefined, string>> {
 
-    const repos = await getRepos();
+    const configRes = getConfiguration();
+    if (configRes.failed) {
+        return configRes;
+    }
+
+    const repos = await getRepos(configRes.value.dir);
     console.log(`Found ${repos.length} repos.`);
     let numProjectsWithLocalWork = 0;
     for (const curRepo of repos) {
@@ -36,22 +48,38 @@ async function main(): Promise<Result<undefined, string>> {
 }
 
 
+function getConfiguration(): Result<IConfig, string> {
+    const argv = yargs
+    .usage("Searches for local Git work that has not been committed or pushed.")
+    .help()
+    .wrap(80)
+    .argv;
+
+    const dirArg = argv._[0];
+    const dir = dirArg ? new Directory(dirArg) : new Directory(".");
+    if (!dir.existsSync()) {
+        return new FailedResult(`Directory does not exist: ${dirArg}`);
+    }
+
+    return new SucceededResult({dir});
+}
+
+
 /**
  * Searches the current working directory recursively for Git repositories.
  *
- * @returns An array of the found Git repositories.
+  * @param dir - The directory to search within
+ * @returns An array of the found Git repositories
  */
-async function getRepos(): Promise<Array<GitRepo>> {
-    const cwd = new Directory(".");
-
+async function getRepos(dir: Directory): Promise<Array<GitRepo>> {
     const repos: Array<GitRepo> = [];
 
-    const cwdRepoRes = await GitRepo.fromDirectory(cwd);
+    const cwdRepoRes = await GitRepo.fromDirectory(dir);
     if (cwdRepoRes.succeeded) {
         repos.push(cwdRepoRes.value);
     }
 
-    await cwd.walk(async (item) => {
+    await dir.walk(async (item) => {
         // Not interested in files.
         if (item instanceof File) { return false; }
 
