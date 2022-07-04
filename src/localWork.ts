@@ -2,7 +2,7 @@ import * as os from "os";
 import { Directory } from "./depot/directory";
 import { File } from "./depot/file";
 import { GitRepo } from "./depot/gitRepo";
-import { Result, SucceededResult } from "./depot/result";
+import { FailedResult, Result, SucceededResult } from "./depot/result";
 import { indent } from "./depot/stringHelpers";
 
 
@@ -25,17 +25,20 @@ async function main(): Promise<Result<undefined, string>> {
 
     const repos = await getRepos();
     console.log(`Found ${repos.length} repos.`);
+    let numProjectsWithLocalWork = 0;
     for (const curRepo of repos) {
-        await report(curRepo);
+        numProjectsWithLocalWork += await report(curRepo) ? 1 : 0;
     }
 
-    const res = await new SucceededResult(undefined);
-    return res;
+    return numProjectsWithLocalWork > 0 ?
+        new FailedResult(`Projects with local work: ${numProjectsWithLocalWork}`) :
+        new SucceededResult(undefined);
 }
 
 
 /**
  * Searches the current working directory recursively for Git repositories.
+ *
  * @returns An array of the found Git repositories.
  */
 async function getRepos(): Promise<Array<GitRepo>> {
@@ -70,6 +73,13 @@ async function getRepos(): Promise<Array<GitRepo>> {
 }
 
 
+/**
+ * Prints a status report for the specified project.
+ *
+ * @param repo - The repo to print a report for
+ * @returns A boolean indicating whether the specified project contains local
+ * work.
+ */
 async function report(repo: GitRepo): Promise<boolean> {
     const warnings: Array<string> = [];
 
@@ -84,7 +94,7 @@ async function report(repo: GitRepo): Promise<boolean> {
     }
 
     try {
-        const {ahead } = await repo.getCommitDeltas();
+        const {ahead} = await repo.getCommitDeltas();
         if (ahead > 0) {
             warnings.push(`Unpushed commits:  ${ahead}`);
         }
@@ -93,10 +103,10 @@ async function report(repo: GitRepo): Promise<boolean> {
         // Intentionally empty.
     }
 
-    const needsAttention = warnings.length > 0;
-    if (needsAttention) {
+    const containsLocalWork = warnings.length > 0;
+    if (containsLocalWork) {
         console.log(repo.directory.toString());
         console.log(warnings.map((str) => indent(str, 4)).join(os.EOL));
     }
-    return needsAttention;
+    return containsLocalWork;
 }
