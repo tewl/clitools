@@ -42,9 +42,13 @@ async function main(): Promise<Result<undefined, string>> {
         numProjectsWithLocalWork += await report(curRepo) ? 1 : 0;
     }
 
-    return numProjectsWithLocalWork > 0 ?
-        new FailedResult(`Projects with local work: ${numProjectsWithLocalWork}`) :
-        new SucceededResult(undefined);
+    if (numProjectsWithLocalWork > 0) {
+        return new FailedResult(`❌ Projects with local work: ${numProjectsWithLocalWork}`);
+    }
+    else {
+        console.log("✅ No local work exists.");
+        return new SucceededResult(undefined);
+    }
 }
 
 
