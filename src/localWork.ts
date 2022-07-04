@@ -75,12 +75,12 @@ async function report(repo: GitRepo): Promise<boolean> {
 
     const modifiedFiles = await repo.modifiedFiles();
     if (modifiedFiles.length > 0) {
-        warnings.push(`Modified files:  ${modifiedFiles.length}`);
+        warnings.push(`Modified files:   ${modifiedFiles.length}`);
     }
 
     const untrackedFiles = await repo.untrackedFiles();
     if (untrackedFiles.length > 0) {
-        warnings.push(`Untracked files: ${untrackedFiles.length}`);
+        warnings.push(`Untracked files:  ${untrackedFiles.length}`);
     }
 
     try {
