@@ -126,8 +126,45 @@ export namespace Result {
 
 
     /**
+     * If the input Result is successful, invokes _fn_ with the value.  If a
+     * successful Result is returned, the original input value is augmented with
+     * the value.
+     *
+     * @param fn - Function that will be invoked if the input Result is
+     * successful.  Returns a Result.  If successful, the properties will
+     * be added to _input_ and returned as a successful Result.
+     * @param input - The input Result
+     * @returns An error if the input is an error or _fn_ returns an error.
+     * Otherwise, a successful Result containing all properties of the original
+     * input and the value returned by _fn_.
+     */
+    export function augment<TInputSuccess, TInputError, TFnSuccess, TFnError>(
+        fn: (input: TInputSuccess) => Result<TFnSuccess, TFnError>,
+        input: Result<TInputSuccess, TInputError>
+    ): Result<TInputSuccess & TFnSuccess, TInputError | TFnError> {
+
+        if (input.failed) {
+            return input;
+        }
+
+        // The input is a successful Result.
+        const fnRes = fn(input.value);
+        if (fnRes.failed) {
+            // _fn_ has errored.  Return that error.
+            return fnRes;
+        }
+
+        // _fn_ has succeeded.  Return an object containing all properties of
+        // the original input and the value returned by _fn_.
+        const augmented = { ...input.value, ...fnRes.value};
+        return new SucceededResult(augmented);
+    }
+
+
+    /**
      * If _input_ is successful, unwraps the value and passes it into _fn_,
-     * returning the result.  If _input_ is not successful, returns it.
+     * returning its returned Result.  If _input_ is not successful, returns it.
+     *
      * @param fn - The function to invoke on _input.value_ when _input_ is
      * successful.
      * @param input - The input Result.
@@ -149,88 +186,68 @@ export namespace Result {
 
 
     /**
-     * When _input_ is successful, maps the wrapped value using _fn_.
-     * @param fn - Function that maps the wrapped success value to another value.
-     * @param input - The input Result.
-     * @return Either the mapped successful Result or the passed-through failure
-     * Result.
+     * Maps each input value through the specified mapping function.  If the
+     * mapping function returns a successful result, its value is added to the
+     * output array; otherwise nothing is added to the output array.
+     *
+     * @param fn - The function that will map each input value to either a
+     * successful value that will be included in the output array or a failure
+     * if no value will be contributed to the output array.
+     * @param input - The input sequence
+     * @returns  The output array
      */
-    export function mapSuccess<TInputSuccess, TOutputSuccess, TError>(
-        fn: (input: TInputSuccess) => TOutputSuccess,
-        input: Result<TInputSuccess, TError>
-    ): Result<TOutputSuccess, TError> {
-        if (input.succeeded) {
-            const mappedValue = fn(input.value);
-            return new SucceededResult(mappedValue);
-        }
-        else {
-            return input;
-        }
+    export function choose<TIn, TOut, TError>(fn: (v: TIn,) => Result<TOut, TError>, input: Iterable<TIn>): Array<TOut> {
+        const inputArr = Array.from(input);
+        const output =
+            inputArr.reduce<Array<TOut>>(
+                (acc, cur) => {
+                    const res = fn(cur);
+                    if (res.succeeded) {
+                        acc.push(res.value);
+                    }
+                    return acc;
+                },
+                []
+            );
+        return output;
     }
-
 
     /**
-     * When _input_ is a failure, maps the wrapped error using _fn_.
-     * @param fn - Function that maps the wrapped error value to another value.
-     * @param input - The input Result.
-     * @return Either the passed-through successful Result or the mapped error
-     * Result.
+     * If the input is a successful value, returns the contained value, else
+     * returns the default value.
+     *
+     * @param defaultValue - The default value to use if input is an error
+     * Result
+     * @param input - The input Result
+     * @returns The contained value if input is successful, else the default
+     * value.
      */
-    export function mapError<TSuccess, TInputError, TOutputError>(
-        fn: (input: TInputError) => TOutputError,
-        input: Result<TSuccess, TInputError>
-    ): Result<TSuccess, TOutputError> {
-        if (input.succeeded) {
-            return input;
-        }
-        else {
-            const mappedError = fn(input.error);
-            return new FailedResult(mappedError);
-        }
+    export function defaultValue<TSuccess, TError>(defaultValue: TSuccess, input: Result<TSuccess, TError>): TSuccess {
+        return input.succeeded ?
+            input.value :
+            defaultValue;
     }
-
 
     /**
-     * Maps values from a source collection until a failed mapping occurs.  If a
-     * failure occurs, the mapping stops immediately.
-     * @param srcCollection - The source collection
-     * @param mappingFunc - The mapping function. Each element from _srcCollection_
-     * is run through this function and it must return a successful result wrapping
-     * the mapped value or a failure result wrapping the error.
-     * @return A successful result wrapping an array of the mapped values or a
-     * failure result wrapping the first failure encountered.
+     * If the input is a successful value, returns the contained value, else
+     * returns _fn()_.  This function is useful when getting the default value
+     * is expensive.
+     *
+     * @param fn - A function that can be invoked to get the default value.  Not
+     * executed unless input is an error.
+     * @param input - The input Result
+     * @returns The contained value if input is successful, else the value
+     * returned by _fn_.
      */
-    export function mapWhileSuccessful<TInput, TOutput, TError>(
-        srcCollection: Array<TInput>,
-        mappingFunc: (curItem: TInput) => Result<TOutput, TError>
-    ): Result<Array<TOutput>, TError> {
-        return srcCollection.reduce<Result<Array<TOutput>, TError>>(
-            (acc, curItem) => {
-                // If we have already failed, just return the error.
-                if (acc.failed) {
-                    return acc;
-                }
-
-                // We have not yet failed, so process the current item.
-                const res = mappingFunc(curItem);
-                if (res.succeeded) {
-                    // Note:  Do not use array.concat() here, because if the current
-                    // result's value is an array, it will be flattened.
-                    acc.value.push(res.value);
-                    return acc;
-                }
-                else {
-                    return res;
-                }
-            },
-            new SucceededResult([])
-        );
+    export function defaultWith<TSuccess, TError>(fn: () => TSuccess, input: Result<TSuccess, TError>): TSuccess {
+        return input.succeeded ?
+            input.value :
+            fn();
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // executeWhileSuccessful()
-    ////////////////////////////////////////////////////////////////////////////////
+    // #region executeWhileSuccessful()
+
 
     // Decoder for type parameter names:
     // T - Because all type parameters must begin with "T"
@@ -398,9 +415,12 @@ export namespace Result {
         );
     }
 
+    // #endregion
+
 
     /**
      * Converts a boolean value into a successful or failure Result.
+     *
      * @param condition - The condition.
      * @param trueSuccessVal - Value to be wrapped in a successful Result when
      * _condition_ is truthy.
@@ -421,7 +441,91 @@ export namespace Result {
 
 
     /**
+     * When _input_ is a failure, maps the wrapped error using _fn_.
+     *
+     * @param fn - Function that maps the wrapped error value to another value.
+     * @param input - The input Result.
+     * @return Either the passed-through successful Result or the mapped error
+     * Result.
+     */
+    export function mapError<TSuccess, TInputError, TOutputError>(
+        fn: (input: TInputError) => TOutputError,
+        input: Result<TSuccess, TInputError>
+    ): Result<TSuccess, TOutputError> {
+        if (input.succeeded) {
+            return input;
+        }
+        else {
+            const mappedError = fn(input.error);
+            return new FailedResult(mappedError);
+        }
+    }
+
+
+    /**
+     * When _input_ is successful, maps the wrapped value using _fn_.
+     *
+     * @param fn - Function that maps the wrapped success value to another value.
+     * @param input - The input Result.
+     * @return Either the mapped successful Result or the passed-through failure
+     * Result.
+     */
+    export function mapSuccess<TInputSuccess, TOutputSuccess, TError>(
+        fn: (input: TInputSuccess) => TOutputSuccess,
+        input: Result<TInputSuccess, TError>
+    ): Result<TOutputSuccess, TError> {
+        if (input.succeeded) {
+            const mappedValue = fn(input.value);
+            return new SucceededResult(mappedValue);
+        }
+        else {
+            return input;
+        }
+    }
+
+
+    /**
+     * Maps values from a source collection until a failed mapping occurs.  If a
+     * failure occurs, the mapping stops immediately.
+     *
+     * @param srcCollection - The source collection
+     * @param mappingFunc - The mapping function. Each element from _srcCollection_
+     * is run through this function and it must return a successful result wrapping
+     * the mapped value or a failure result wrapping the error.
+     * @return A successful result wrapping an array of the mapped values or a
+     * failure result wrapping the first failure encountered.
+     */
+    export function mapWhileSuccessful<TInput, TOutput, TError>(
+        srcCollection: Array<TInput>,
+        mappingFunc: (curItem: TInput) => Result<TOutput, TError>
+    ): Result<Array<TOutput>, TError> {
+        return srcCollection.reduce<Result<Array<TOutput>, TError>>(
+            (acc, curItem) => {
+                // If we have already failed, just return the error.
+                if (acc.failed) {
+                    return acc;
+                }
+
+                // We have not yet failed, so process the current item.
+                const res = mappingFunc(curItem);
+                if (res.succeeded) {
+                    // Note:  Do not use array.concat() here, because if the current
+                    // result's value is an array, it will be flattened.
+                    acc.value.push(res.value);
+                    return acc;
+                }
+                else {
+                    return res;
+                }
+            },
+            new SucceededResult([])
+        );
+    }
+
+
+    /**
      * Performs side-effects for the given Result
+     *
      * @param fn - The function to invoke, passing the Result
      * @param input - The input Result
      * @returns The original input Result
@@ -436,24 +540,8 @@ export namespace Result {
 
 
     /**
-     * Performs side-effects when the specified Result is successful
-     * @param fn - The function to invoke, passing the successful Result's value
-     * @param input - The input Result
-     * @returns The original input Result
-     */
-    export function tapSuccess<TSuccess, TError>(
-        fn: (val: TSuccess) => void,
-        input: Result<TSuccess, TError>
-    ): Result<TSuccess, TError> {
-        if (input.succeeded) {
-            fn(input.value);
-        }
-        return input;
-    }
-
-
-    /**
      * Performs side-effects when the specified Result is a failure
+     *
      * @param fn - The function to invoke, passing the failed Result's error
      * @param input - The Input Result
      * @returns The original input Result
@@ -464,6 +552,24 @@ export namespace Result {
     ): Result<TSuccess, TError> {
         if (input.failed) {
             fn(input.error);
+        }
+        return input;
+    }
+
+
+    /**
+     * Performs side-effects when the specified Result is successful
+     *
+     * @param fn - The function to invoke, passing the successful Result's value
+     * @param input - The input Result
+     * @returns The original input Result
+     */
+    export function tapSuccess<TSuccess, TError>(
+        fn: (val: TSuccess) => void,
+        input: Result<TSuccess, TError>
+    ): Result<TSuccess, TError> {
+        if (input.succeeded) {
+            fn(input.value);
         }
         return input;
     }

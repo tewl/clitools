@@ -17,7 +17,7 @@ import { matchesAny, strToRegExp } from "./depot/regexpHelpers";
 import { Result, SucceededResult } from "./depot/result";
 import _ = require("lodash");
 import { pipe } from "./depot/pipe";
-import { boolToOption, isNone, isSome, mapSome, Option } from "./depot/option";
+import { Option } from "./depot/option";
 
 
 if (require.main === module) {
@@ -49,7 +49,7 @@ async function findGrepMain(): Promise<number> {
     console.log();
 
 
-    if (isNone(config.textRegex)) {
+    if (config.textRegex.isNone) {
         return doFilesystemSearch(config);
     }
     else {
@@ -122,10 +122,10 @@ function getConfiguration(): Result<IFindGrepConfig, string> {
     // Get the optional text regex positional argument.
     const textRegexOptResult = pipe(
         argv._[1],
-        (str) => boolToOption(str, str),
-        (strOpt) => mapSome(strToRegExp, strOpt)
+        (str) => Option.fromBool(str, str),
+        (strOpt) => Option.mapSome(strToRegExp, strOpt)
     );
-    if (isSome(textRegexOptResult) && textRegexOptResult.value.failed) {
+    if (textRegexOptResult.isSome && textRegexOptResult.value.failed) {
         return textRegexOptResult.value;
     }
 
@@ -142,7 +142,7 @@ function getConfiguration(): Result<IFindGrepConfig, string> {
         recurse:     argv.recurse,
         pathRegex:   pathRegexResult.value,
         pathIgnores: pathIgnoresResult.value,
-        textRegex:   mapSome((res) => res.value!, textRegexOptResult)
+        textRegex:   Option.mapSome((res) => res.value!, textRegexOptResult)
     });
 }
 
