@@ -27,6 +27,7 @@ const scripts: Array<string> = [
     path.join("src", "convert.js"),
     path.join("src", "copywrite.js"),
     path.join("src", "evaluate.js"),
+    path.join("src", "fantomasModified.js"),
     path.join("src", "findgrep.js"),
     path.join("src", "hr.js"),
     path.join("src", "ideadiff.js"),
