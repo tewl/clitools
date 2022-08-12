@@ -34,6 +34,9 @@ async function main(): Promise<Result<undefined, string>> {
         return configRes;
     }
 
+    // TODO: Find C:\Program Files\JetBrains\JetBrains Rider 2022.1.2\bin\rider.bat
+    // TODO: Invoke: rider --diff fileOrDirA fileOrDirB
+
     await 5;
     return new SucceededResult(undefined);
 }
