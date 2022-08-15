@@ -1,3 +1,6 @@
+import * as os from "os";
+import * as yargs from "yargs";
+import { insertIf } from "./depot/arrayHelpers";
 import { Directory } from "./depot/directory";
 import { GitRepo } from "./depot/gitRepo";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
@@ -20,7 +23,39 @@ if (require.main === module) {
 }
 
 
+interface IConfig {
+    check: boolean;
+}
+
+
+function getConfiguration(): Result<IConfig, string> {
+    const argv = yargs
+    .usage([
+        "Runs Fantomas F# style checker on all staged and modified .fs files."
+    ].join(os.EOL))
+    .help()
+    .option(
+        "check",
+        {
+            demandOption: false,
+            type:         "boolean",
+            default:      false,
+            describe:     "Only check the files.  Do not fix them."
+        }
+    )
+    .wrap(80)
+    .argv;
+
+    return new SucceededResult({check: argv.check});
+}
+
+
 async function main(): Promise<Result<undefined, string>> {
+
+    const configRes = getConfiguration();
+    if (configRes.failed) {
+        return new FailedResult("Invalid configuration.");
+    }
 
     const repoRes = await GitRepo.fromDirectory(new Directory(process.cwd()));
     if (repoRes.failed) {
@@ -47,13 +82,21 @@ async function main(): Promise<Result<undefined, string>> {
     inputFiles.forEach((file) => console.log(file.toString()));
 
     const spawnOutputs = inputFiles.map((inputFile) => {
-        return spawn("dotnet", ["fantomas", inputFile.toString()]);
+        const args = [
+            "fantomas",
+            ...insertIf(configRes.value.check, "--check"),
+            inputFile.toString()
+        ];
+
+        return spawn("dotnet", args);
     });
 
     const res = Result.all(await Promise.all(spawnOutputs.map((so) => so.closePromise)));
     if (res.failed) {
         return new FailedResult(spawnErrorToString(res.error));
     }
+
+    console.log(res.value);
 
     return new SucceededResult(undefined);
 }
