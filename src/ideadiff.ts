@@ -3,6 +3,7 @@ import { Directory } from "./depot/directory";
 import { File } from "./depot/file";
 import { pipe } from "./depot/pipe";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
+import { spawn } from "./depot/spawn2";
 
 
 if (require.main === module) {
@@ -34,10 +35,19 @@ async function main(): Promise<Result<undefined, string>> {
         return configRes;
     }
 
-    // TODO: Find C:\Program Files\JetBrains\JetBrains Rider 2022.1.2\bin\rider.bat
-    // TODO: Invoke: rider --diff fileOrDirA fileOrDirB
+    const ideRes = await findIde();
+    if (ideRes.failed) {
+        return ideRes;
+    }
+    else {
+        console.log(`Found IDE: ${ideRes.value.toString()}`);
+    }
 
-    await 5;
+    const spawnRes =
+        spawn(ideRes.value.absPath(),
+              ["diff", configRes.value.left.absPath(), configRes.value.right.absPath()]);
+    await spawnRes.closePromise;
+
     return new SucceededResult(undefined);
 }
 
@@ -79,4 +89,25 @@ function getConfiguration(): Result<IConfig, string> {
         ),
         (res) => Result.mapSuccess(([left, right]) => ({left, right}), res)
     );
+}
+
+
+async function findIde(): Promise<Result<File, string>> {
+    const progFilesDir = new Directory("c:", "Program Files", "JetBrains");
+    let foundExe: File | undefined = undefined;
+
+    await progFilesDir.walk((item) => {
+        if (item instanceof File) {
+            if (item.fileName === "rider64.exe" ||
+                item.fileName === "webstorm64.exe") {
+                foundExe = item;
+            }
+        }
+        // Only recurse into directories when an exe has not been found.
+        return foundExe === undefined;
+    });
+
+    return foundExe === undefined ?
+        new FailedResult("Could not find JetBrains IDE executable.") :
+        new SucceededResult(foundExe);
 }
