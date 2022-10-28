@@ -70,25 +70,23 @@ function getConfiguration(): Result<IConfig, string> {
     }
 
     function argToDirOrFile(arg: string | undefined) {
-        return pipe(
-            arg,
-            (arg) => arg === undefined ? new FailedResult("File or directory not specified.") : new SucceededResult(arg),
-            (res) => Result.bind(isDirOrFile, res)
-        );
+        return pipe(arg)
+        .pipe((arg) => arg === undefined ? new FailedResult("File or directory not specified.") : new SucceededResult(arg))
+        .pipe((res) => Result.bind(isDirOrFile, res))
+        .end();
     }
 
-    return pipe(
-        Result.all([argToDirOrFile(argv._[0]), argToDirOrFile(argv._[1])]),
-        (res) => Result.augment(
-            ([left, right]) => {
-                return left.constructor.name === right.constructor.name ?
+    return pipe(Result.all([argToDirOrFile(argv._[0]), argToDirOrFile(argv._[1])]))
+    .pipe((res) => Result.augment(
+        ([left, right]) => {
+            return left.constructor.name === right.constructor.name ?
                     new SucceededResult({}) :
                     new FailedResult("Both arguments must be either a directory or a file.");
-            },
-            res
-        ),
-        (res) => Result.mapSuccess(([left, right]) => ({left, right}), res)
-    );
+        },
+        res
+    ))
+    .pipe((res) => Result.mapSuccess(([left, right]) => ({left, right}), res))
+    .end();
 }
 
 

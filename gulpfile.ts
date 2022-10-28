@@ -36,6 +36,7 @@ const scripts: Array<string> = [
     path.join("src", "randomFile.js"),
     path.join("src", "unique.js"),
     path.join("src", "watch.js"),
+    path.join("src", "windrives.js"),
     path.join("src", "windowsSpotlightImages.js"),
     path.join("src", "movePhotos", "movePhotos.js")
 ];

@@ -110,30 +110,29 @@ function getConfiguration(): Result<IFindGrepConfig, string> {
     .argv;
 
     // Get the path regex positional argument.
-    const pathRegexResult = pipe(
-        new SucceededResult(argv._[0]),
-        (r) => Result.bind((v) => Result.fromBool(_.isString(v), v, "Path regex not specified."), r),
-        (r) => Result.bind(strToRegExp, r)
-    );
+    const pathRegexResult = pipe(new SucceededResult(argv._[0]))
+    .pipe((r) => Result.bind((v) => Result.fromBool(_.isString(v), v, "Path regex not specified."), r))
+    .pipe((r) => Result.bind(strToRegExp, r))
+    .end();
+
+
     if (pathRegexResult.failed) {
         return pathRegexResult;
     }
 
     // Get the optional text regex positional argument.
-    const textRegexOptResult = pipe(
-        argv._[1],
-        (str) => Option.fromBool(str, str),
-        (strOpt) => Option.mapSome(strToRegExp, strOpt)
-    );
+    const textRegexOptResult = pipe(argv._[1])
+    .pipe((str) => Option.fromBool(str, str))
+    .pipe((strOpt) => Option.mapSome(strToRegExp, strOpt))
+    .end();
     if (textRegexOptResult.isSome && textRegexOptResult.value.failed) {
         return textRegexOptResult.value;
     }
 
     // Get the path ignore regexes from the --pathIgnore arguments.
-    const pathIgnoresResult = pipe(
-        new SucceededResult(toArray<string>(argv.pathIgnore)),
-        (r) => Result.bind((v) => Result.mapWhileSuccessful(v, strToRegExp), r)
-    );
+    const pathIgnoresResult = pipe(new SucceededResult(toArray<string>(argv.pathIgnore)))
+    .pipe((r) => Result.bind((v) => Result.mapWhileSuccessful(v, strToRegExp), r))
+    .end();
     if (pathIgnoresResult.failed) {
         return pathIgnoresResult;
     }

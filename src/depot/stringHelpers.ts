@@ -2,13 +2,14 @@ import * as os from "os";
 import * as crypto from "crypto";
 import * as _ from "lodash";
 import {createEolRegex} from "./regexpHelpers";
+import { FailedResult, Result, SucceededResult } from "./result";
 
 
 /**
- * Counts the number of times padStr occurs at the beginning of str.
+ * Counts the number of times _padStr_ occurs at the beginning of str.
  * @param str - The string to inspect
  * @param padStr - The substring to count occurrences of
- * @return The number of times padStr occurs at the beginning of str
+ * @return The number of times _padStr_ occurs at the beginning of _str_
  */
 export function numInitial(str: string, padStr: string): number {
     if (padStr === "") {
@@ -28,7 +29,7 @@ export function numInitial(str: string, padStr: string): number {
 
 
 /**
- * Creates a string where each line of src is indented.
+ * Creates a string where each line of _src_ is indented.
  * @param src - The string to be indented
  * @param numSpacesOrPad - The number of spaces to indent each line
  * @param skipFirstLine - If truthy, the first line will not be indented
@@ -159,6 +160,23 @@ export function removeBlankLines(str: string): string {
  */
 export function isBlank(text: string): boolean {
     return blankLineRegex.test(text);
+}
+
+
+/**
+ * Determines whether the specified value is a string containing one or more
+ * non-whitespace characters.  Suitable for dto or input validation.
+ *
+ * @param val - The value to test
+ * @param errMsg - The error message that will be returned if _val_ is not a
+ * string or is blank.
+ * @return Whether the value is a string containing one or more non-whitespace
+ * characters.
+ */
+export function isNonBlankString(val: unknown, errMsg: string): Result<string, string> {
+    return typeof val === "string" && !isBlank(val) ?
+        new SucceededResult(val) :
+        new FailedResult(errMsg);
 }
 
 
@@ -337,4 +355,24 @@ export function splice(str: string, index: number, numCharsToDelete: number, ins
 export function hash(str: string, algorithm: string = "sha256", encoding: crypto.BinaryToTextEncoding = "hex"): string {
     const hash = crypto.createHash(algorithm).update(str).digest(encoding);
     return hash;
+}
+
+
+/**
+ * Attempts to parse a decimal string as an integer. This can be useful when the
+ * input may be the string representation of a 64-bit integer, which cannot be
+ * represented by JavaScript's number type (which only uses 53 bits for the
+ * integer portion of the number).  If this function returns an error Result,
+ * the client may want to fall back and use _BigInt_ or a library such as "long"
+ * to handle the value.
+ * @param intStr - The string to be parsed.
+ * @returns
+ */
+export function parseDecInt(intStr: string): Result<number, string> {
+    const num = parseInt(intStr, 10);
+    const backToStr = num.toString();
+    return backToStr === intStr ?
+        new SucceededResult(num) :
+        new FailedResult(`The string '${intStr}' has a lossy parsing of '${backToStr}'.`);
+
 }

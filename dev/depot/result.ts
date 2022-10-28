@@ -490,7 +490,7 @@ export namespace Result {
      * Maps values from a source collection until a failed mapping occurs.  If a
      * failure occurs, the mapping stops immediately.
      *
-     * @param srcCollection - The source collection
+     * @param collection - The source collection
      * @param mappingFunc - The mapping function. Each element from _srcCollection_
      * is run through this function and it must return a successful result wrapping
      * the mapped value or a failure result wrapping the error.
@@ -498,10 +498,10 @@ export namespace Result {
      * failure result wrapping the first failure encountered.
      */
     export function mapWhileSuccessful<TInput, TOutput, TError>(
-        srcCollection: Array<TInput>,
+        collection: Array<TInput>,
         mappingFunc: (curItem: TInput) => Result<TOutput, TError>
     ): Result<Array<TOutput>, TError> {
-        return srcCollection.reduce<Result<Array<TOutput>, TError>>(
+        return collection.reduce<Result<Array<TOutput>, TError>>(
             (acc, curItem) => {
                 // If we have already failed, just return the error.
                 if (acc.failed) {
@@ -522,6 +522,53 @@ export namespace Result {
             },
             new SucceededResult([])
         );
+    }
+
+
+    /**
+     * Converts a boolean value to a Result where falsy values become a
+     * successful Result containing _val_ and truthy values become a failed
+     * Result containing the specified error message.
+     *
+     * @param trueErrMsg - Error messaged use if the input is truthy
+     * @param val - The input value
+     * @returns A successful Result if the input is falsy; a failure Result
+     * otherwise.
+     */
+    export function requireFalsy<TVal>(trueErrMsg: string, val: TVal): Result<TVal, string> {
+        return val ? new FailedResult(trueErrMsg) : new SucceededResult(val);
+    }
+
+
+    /**
+     * Converts an object containing an _ok_ property (such as a fetch response)
+     * to a Result.
+     *
+     * @param errMsg - Error message to use if the ok property is false
+     * @param val - The input object that has an ok property
+     * @returns If _ok_ is truthy, a successful Result wrapping _val_.
+     * Otherwise, a failed Result containing the error message.
+     */
+    export function requireOk<TVal extends {ok: boolean}>(
+        errMsg: string,
+        val: TVal
+    ): Result<TVal, string> {
+        return val.ok ? new SucceededResult(val) : new FailedResult(errMsg);
+    }
+
+
+    /**
+     * Converts a boolean value to a Result where truthy values become a successful
+     * Result containing true and falsy values become a failed Result containing
+     * the specified error message.
+     *
+     * @param falseErrMsg - Error message used if the input is falsy
+     * @param val - The input value
+     * @returns A successful Result if the input is truthy; a failure Result
+     * otherwise.
+     */
+    export function requireTruthy<TVal>(falseErrMsg: string, val: TVal): Result<TVal, string> {
+        return val ? new SucceededResult(val) : new FailedResult(falseErrMsg);
     }
 
 
@@ -574,6 +621,38 @@ export namespace Result {
             fn(input.value);
         }
         return input;
+    }
+
+
+    /**
+     * Unwraps a successful Result, throwing if it is a failure.
+     *
+     * @param errorMsg - The error message to use when throwing in the event the
+     * Result is a failure
+     * @param result - The input Result
+     * @returns The unwrapped successful Result value
+     */
+    export function throwIfFailed<TSuccess, TError>(errorMsg: string, result: Result<TSuccess, TError>): TSuccess {
+        if (result.failed) {
+            throw new Error(errorMsg);
+        }
+        return result.value;
+    }
+
+
+    /**
+     * Unwraps a failed Result, throwing if it is a success.
+     *
+     * @param errorMsg - The error message to use when throwing in the event the
+     * Result is a success.
+     * @param result - The input Result
+     * @returns The unwrapped failed Result error.
+     */
+    export function throwIfSucceeded<TSuccess, TError>(errorMsg: string, result: Result<TSuccess, TError>): TError {
+        if (result.succeeded) {
+            throw new Error(`${errorMsg}: ${JSON.stringify(result.error)}`);
+        }
+        return result.error;
     }
 
 }

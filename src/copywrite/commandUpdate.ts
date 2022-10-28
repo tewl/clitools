@@ -3,7 +3,7 @@ import {Argv, Arguments} from "yargs";
 import {Directory} from "../depot/directory";
 import {File} from "../depot/file";
 import {CopyOperation} from "./copyOperation";
-import table = require("text-table");
+import table from "text-table";
 import {promptToContinue} from "../depot/prompts";
 
 

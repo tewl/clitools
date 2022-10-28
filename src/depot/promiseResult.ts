@@ -21,6 +21,12 @@ export async function toPromise<TSuccess, TError>(
 ////////////////////////////////////////////////////////////////////////////////
 // all()
 ////////////////////////////////////////////////////////////////////////////////
+export async function all<TSA, TFA>(
+    a: Promise<Result<TSA, TFA>>
+): Promise<Result<
+    [TSA], IIndexedItem<TFA>
+>>;
+
 export async function all<TSA, TFA, TSB, TFB>(
     a: Promise<Result<TSA, TFA>>,
     b: Promise<Result<TSB, TFB>>
@@ -145,8 +151,10 @@ export function all(
  * This has the advantage that higher order functions can be used to create the
  * array (i.e. _.map()), but has the disadvantage that there can only be one
  * Result success type and one Result failure type.
- * @param param - Description
- * @return Description
+ * @param promises - The input array of Promises for Results.
+ * @return If all input Promises resolve with successful Results, a Result
+ * containing an array of those successful Results is returned.  Otherwise, an
+ * array of the failed Results is returned.
  */
 export function allArray<TSuccess, TFail>(
     promises: Array<Promise<Result<TSuccess, TFail>>>
@@ -189,4 +197,22 @@ export function allArray<TSuccess, TFail>(
             });
         });
     });
+}
+
+
+export async function bind<TInSuccess, TOutSuccess, TError>(
+    fn: (x: TInSuccess) => Result<TOutSuccess, TError> | Promise<Result<TOutSuccess, TError>>,
+    input: Result<TInSuccess, TError> | Promise<Result<TInSuccess, TError>>
+): Promise<Result<TOutSuccess, TError>> {
+
+    const awaitedInputRes = await Promise.resolve(input);
+    if (awaitedInputRes.succeeded) {
+
+        // Execute the specified fn.
+        const output = fn(awaitedInputRes.value);
+        return output;
+    }
+    else {
+        return awaitedInputRes;
+    }
 }
