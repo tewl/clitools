@@ -26,9 +26,17 @@ function getMappings(): Result<IDriveMapping[], string> {
 
     const mappings: IDriveMapping[] = [
         {
+            driveLetter: "D",
+            dir:         new Directory(homeRes.value, "OneDrive - Rockwell Automation, Inc", "Desktop")
+        },
+        {
             driveLetter: "O",
             dir:         new Directory(homeRes.value, "OneDrive - Rockwell Automation, Inc", "home", "rok_data")
-        }
+        },
+        {
+            driveLetter: "S",
+            dir:         new Directory(homeRes.value, "SynologyDrive", "Drive", "home", "data")
+        },
     ];
 
     return new SucceededResult(mappings);
