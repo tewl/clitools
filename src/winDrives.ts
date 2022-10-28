@@ -5,29 +5,33 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 import _ from "lodash";
+import table from "text-table";
 import { Directory } from "./depot/directory";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
 import { spawn, spawnErrorToString } from "./depot/spawn2";
 
 
-type DriveMappings = Map<string, Directory>;
-// type IDriveMapping {
-//     driveLetter: string;
-//     dir:         Directory;
-// }
+interface IDriveMapping {
+    driveLetter: string;
+    dir:         Directory;
+}
 
-function getMappings(): Result<DriveMappings, string> {
+
+function getMappings(): Result<IDriveMapping[], string> {
 
     const homeRes = Result.requireTruthy("HOME environment variable does not exist.", process.env.HOME);
     if (homeRes.failed) {
         return homeRes;
     }
 
-    const mapping = new Map<string, Directory>([
-        ["O", new Directory(homeRes.value, "OneDrive - Rockwell Automation, Inc", "home", "rok_data")]
-    ]);
-    return new SucceededResult(mapping);
+    const mappings: IDriveMapping[] = [
+        {
+            driveLetter: "O",
+            dir:         new Directory(homeRes.value, "OneDrive - Rockwell Automation, Inc", "home", "rok_data")
+        }
+    ];
 
+    return new SucceededResult(mappings);
 }
 
 
@@ -55,9 +59,13 @@ async function main(): Promise<number> {
 
     const results = await createMappings(mappingsRes.value);
     const [successes, failures] = _.partition(results, (curRes) => curRes.succeeded);
-    successes.forEach((curSuccess) => {
-        console.log(curSuccess.value);
-    });
+
+    if (successes.length > 0) {
+        const rows = successes.map((curSuccess) => [`${curSuccess.value!.driveLetter}:`, curSuccess.value!.dir.toString()]);
+        const successTable = table(rows, {hsep: " ==> "});
+        console.log(successTable);
+    }
+
     failures.forEach((curFailure) => {
         console.error(curFailure.error);
     });
@@ -66,28 +74,26 @@ async function main(): Promise<number> {
 }
 
 
-async function createMappings(mappings: DriveMappings): Promise<Array<Result<string, string>>> {
-
-    const promiseResults =
-        Array.from(mappings.entries())
-        .map(([driverLetter, dir]) => createMapping(driverLetter, dir));
-
-    return Promise.all(promiseResults);
-
+async function createMappings(mappings: IDriveMapping[]): Promise<Array<Result<IDriveMapping, string>>> {
+    return Promise.all(mappings.map(createMapping));
 }
 
 
-async function createMapping(driverLetter: string, dir: Directory): Promise<Result<string, string>> {
+async function createMapping(mapping: IDriveMapping): Promise<Result<IDriveMapping, string>> {
 
-    const driveStr = `${driverLetter}:`;
+    const driveStr = `${mapping.driveLetter}:`;
 
     const driveDir = new Directory(driveStr);
     if (driveDir.existsSync()) {
         return new FailedResult(`Drive letter ${driveStr} is already in use.`);
     }
 
-    const res = await spawn("subst", [driveStr, dir.absPath()]).closePromise;
+    if (!mapping.dir.existsSync()) {
+        return new FailedResult(`The directory "${mapping.dir.toString()}" does not exist.`);
+    }
+
+    const res = await spawn("subst", [driveStr, mapping.dir.absPath()]).closePromise;
     return res.succeeded ?
-        new SucceededResult(`Successfully mapped ${driveStr} to ${dir.toString()}`) :
+        new SucceededResult(mapping) :
         new FailedResult(spawnErrorToString(res.error));
 }
