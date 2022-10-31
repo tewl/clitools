@@ -65,15 +65,21 @@ async function main(): Promise<number> {
         return -1;
     }
 
+    // Print the mapping information.
+    const rows = mappingsRes.value.map((mapping) => [`${mapping.driveLetter}:`, mapping.dir]);
+    console.log(table(rows, {hsep: " ==> "}));
+    console.log("");
+
+    // Create the mappings.
     const results = await createMappings(mappingsRes.value);
     const [successes, failures] = _.partition(results, (curRes) => curRes.succeeded);
 
-    if (successes.length > 0) {
-        const rows = successes.map((curSuccess) => [`${curSuccess.value!.driveLetter}:`, curSuccess.value!.dir.toString()]);
-        const successTable = table(rows, {hsep: " ==> "});
-        console.log(successTable);
-    }
+    // Print info about the successful mappings.
+    successes.forEach((curSuccess) => {
+        console.log(`Successfully mapped ${curSuccess.value!.driveLetter} to "${curSuccess.value!.dir}".`);
+    });
 
+    // Print info about failed mappings.
     failures.forEach((curFailure) => {
         console.error(curFailure.error);
     });
