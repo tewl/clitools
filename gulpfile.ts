@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as _ from "lodash";
-import chalk = require("chalk");
+import chalk from "chalk";
 import { nodeBinForOs, createCmdLaunchScript, makeNodeScriptExecutable } from "./dev/depot/nodeUtil";
 import { Directory } from "./dev/depot/directory";
 import { toGulpError } from "./dev/depot/gulpHelpers";
@@ -24,6 +24,7 @@ const tmpDir  = new Directory(__dirname, "tmp");
 // These scripts will be made executable.
 //
 const scripts: Array<string> = [
+    path.join("src", "captlog.js"),
     path.join("src", "convert.js"),
     path.join("src", "copywrite.js"),
     path.join("src", "evaluate.js"),

@@ -7,6 +7,26 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Launch captlog",
+            "runtimeExecutable": "node",
+            "runtimeArgs": [
+                "--nolazy",
+                "-r",
+                "ts-node/register/transpile-only"
+            ],
+            "args": [
+                "src/captlog.ts",
+            ],
+            "cwd": "${workspaceRoot}",
+            "internalConsoleOptions": "openOnSessionStart",
+            "skipFiles": [
+                "<node_internals>/**",
+                "node_modules/**"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Launch findgrep",
             "runtimeExecutable": "node",
             "runtimeArgs": [

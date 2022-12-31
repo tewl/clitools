@@ -91,7 +91,7 @@ async function main(): Promise<Result<undefined, string>> {
         return spawn("dotnet", args);
     });
 
-    const res = Result.all(await Promise.all(spawnOutputs.map((so) => so.closePromise)));
+    const res = Result.allArrayM(await Promise.all(spawnOutputs.map((so) => so.closePromise)));
     if (res.failed) {
         return new FailedResult(spawnErrorToString(res.error));
     }

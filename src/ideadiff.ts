@@ -76,7 +76,7 @@ function getConfiguration(): Result<IConfig, string> {
         .end();
     }
 
-    return pipe(Result.all([argToDirOrFile(argv._[0]), argToDirOrFile(argv._[1])]))
+    return pipe(Result.allArrayM([argToDirOrFile(argv._[0]), argToDirOrFile(argv._[1])]))
     .pipe((res) => Result.augment(
         ([left, right]) => {
             return left.constructor.name === right.constructor.name ?
