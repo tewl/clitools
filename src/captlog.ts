@@ -1,8 +1,7 @@
 import * as os from "os";
 import { File } from "./depot/file";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
-import { spawn } from "child_process";
-
+import { launch } from "./depot/launch";
 
 if (require.main === module) {
     // main() can return a failed result or reject.
@@ -163,13 +162,5 @@ function openEmacs(file: File, openInExistingEditor = true): void {
 
     args.push(file.absPath());
 
-    const childProc = spawn(
-        cmd,
-        args,
-        {
-            detached: true,
-            stdio:    "ignore"   // I/O streams must not be connected to the parent's streams
-        }
-    );
-    childProc.unref();
+    launch(cmd, args);  
 }
