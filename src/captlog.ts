@@ -21,8 +21,6 @@ if (require.main === module) {
 
 async function main(): Promise<Result<undefined, string>> {
 
-    await 0;
-
     const fileRes = getCaptLogFile();
     if (fileRes.failed) {
         return fileRes;
@@ -162,5 +160,5 @@ function openEmacs(file: File, openInExistingEditor = true): void {
 
     args.push(file.absPath());
 
-    launch(cmd, args);  
+    launch(cmd, args);
 }
