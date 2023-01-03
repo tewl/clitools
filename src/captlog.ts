@@ -1,7 +1,7 @@
 import * as os from "os";
 import { File } from "./depot/file";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
-import { launch } from "./depot/launch";
+import { openInEmacs } from "./depot/editor";
 
 if (require.main === module) {
     // main() can return a failed result or reject.
@@ -26,7 +26,7 @@ async function main(): Promise<Result<undefined, string>> {
         return res;
     }
 
-    openEmacs(res.value, false);
+    openInEmacs(res.value, false);
 
     return new SucceededResult(undefined);
 }
@@ -163,24 +163,4 @@ async function appendDailyTemplate(captlogFile: File): Promise<Result<void, stri
     }
 
     return new SucceededResult(undefined);
-}
-
-
-function openEmacs(file: File, openInExistingEditor = true): void {
-
-    let cmd: string;
-    const args: Array<string> = [];
-
-    if (openInExistingEditor) {
-        // Note: Must run M-x server-start in Emacs for this to work.
-        cmd = "emacsclient";
-        args.push("-n");
-    }
-    else {
-        cmd = "emacs";
-    }
-
-    args.push(file.absPath());
-
-    launch(cmd, args);
 }
