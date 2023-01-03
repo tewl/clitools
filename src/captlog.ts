@@ -21,17 +21,36 @@ if (require.main === module) {
 
 async function main(): Promise<Result<undefined, string>> {
 
-    const fileRes = getCaptLogFile();
+    const res = await appendToCaptlogIfNeeded();
+    if (res.failed) {
+        return res;
+    }
+
+    openEmacs(res.value, false);
+
+    return new SucceededResult(undefined);
+}
+
+/**
+ * Locates and appends the daily template (if needed).
+ *
+ * @return If successful, the captlog file.  Otherwise, an error message.
+ */
+export async function appendToCaptlogIfNeeded(): Promise<Result<File, string>> {
+    await 0;
+
+    const fileRes = getCaptlogFile();
     if (fileRes.failed) {
         return fileRes;
     }
-    const logFile = fileRes.value;
-    console.log(`Successfully found captlog file: ${logFile.absPath()}`);
+    const captlogFile = fileRes.value;
+    console.log(`Successfully found captlog file: ${captlogFile.absPath()}.`);
 
-    const needToAppend = await needToAppendDailyTemplate(logFile);
+
+    const needToAppend = await needToAppendDailyTemplate(captlogFile);
     if (needToAppend) {
-        console.log("Inserting daily template...");
-        const appendRes = await appendDailyTemplate(logFile);
+        console.log(`Inserting daily template...`);
+        const appendRes = await appendDailyTemplate(captlogFile);
         if (appendRes.failed) {
             return appendRes;
         }
@@ -40,12 +59,14 @@ async function main(): Promise<Result<undefined, string>> {
         console.log(`Today's entry already exists.`);
     }
 
-    openEmacs(logFile, true);
-
-    return new SucceededResult(undefined);
+    return new SucceededResult(captlogFile);
 }
 
 
+/**
+ * Gets the line of text that separates daily entries.
+ * @returns The separator text
+ */
 function getDailyDelimiterLine(): string {
     const now = new Date(Date.now());
     const str = `${now.toLocaleDateString()} (${dayNumToDayName(now.getDay())})`;
@@ -55,11 +76,12 @@ function getDailyDelimiterLine(): string {
 }
 
 
-async function needToAppendDailyTemplate(logFile: File): Promise<boolean> {
+
+async function needToAppendDailyTemplate(captlogFile: File): Promise<boolean> {
     const delim = getDailyDelimiterLine();
     let delimFound = false;
 
-    await logFile.readLines((lineText) => {
+    await captlogFile.readLines((lineText) => {
         if (lineText === delim) {
             delimFound = true;
         }
@@ -91,7 +113,7 @@ function dayNumToDayName(dayNum: number): string {
 }
 
 
-function getCaptLogFile(): Result<File, string> {
+function getCaptlogFile(): Result<File, string> {
     const cloudHomeStr = process.env.CLOUDHOME;
     if (!cloudHomeStr) {
         return new FailedResult(`CLOUDHOME environment variable is not set.`);
@@ -104,7 +126,7 @@ function getCaptLogFile(): Result<File, string> {
 }
 
 
-async function appendDailyTemplate(logFile: File): Promise<Result<void, string>> {
+async function appendDailyTemplate(captlogFile: File): Promise<Result<void, string>> {
     const delimLine = getDailyDelimiterLine();
 
     const template = [
@@ -135,7 +157,7 @@ async function appendDailyTemplate(logFile: File): Promise<Result<void, string>>
         ``
     ];
 
-    const res = await logFile.append(template.join(os.EOL), false);
+    const res = await captlogFile.append(template.join(os.EOL), false);
     if (res.failed) {
         return res;
     }
