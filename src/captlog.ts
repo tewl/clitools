@@ -26,7 +26,7 @@ async function main(): Promise<Result<undefined, string>> {
         return res;
     }
 
-    openInEmacs(res.value, false);
+    openInEmacs([res.value], false);
 
     return new SucceededResult(undefined);
 }
@@ -37,8 +37,6 @@ async function main(): Promise<Result<undefined, string>> {
  * @return If successful, the captlog file.  Otherwise, an error message.
  */
 export async function appendToCaptlogIfNeeded(): Promise<Result<File, string>> {
-    await 0;
-
     const fileRes = getCaptlogFile();
     if (fileRes.failed) {
         return fileRes;
@@ -76,7 +74,13 @@ function getDailyDelimiterLine(): string {
 }
 
 
-
+/**
+ * Helper function that determines whether the specified captain's log file has
+ * an entry for today.
+ *
+ * @param captlogFile - The file to check
+ * @return true if an entry for today was not found; false otherwise.
+ */
 async function needToAppendDailyTemplate(captlogFile: File): Promise<boolean> {
     const delim = getDailyDelimiterLine();
     let delimFound = false;
@@ -91,6 +95,12 @@ async function needToAppendDailyTemplate(captlogFile: File): Promise<boolean> {
 }
 
 
+/**
+ * Helper function that converts a day integer into its string form.
+ *
+ * @param dayNum - The day number as specified by the JS Date API
+ * @returns The day name
+ */
 function dayNumToDayName(dayNum: number): string {
     switch (dayNum) {
         case 0:
@@ -113,6 +123,12 @@ function dayNumToDayName(dayNum: number): string {
 }
 
 
+/**
+ * Locates the captain's log file.
+ *
+ * @returns A successful Result containing the captain's log file or an
+ * descriptive error message.
+ */
 function getCaptlogFile(): Result<File, string> {
     const cloudHomeStr = process.env.CLOUDHOME;
     if (!cloudHomeStr) {
@@ -126,6 +142,13 @@ function getCaptlogFile(): Result<File, string> {
 }
 
 
+/**
+ * Helper function that appends the daily template to the specified captain's
+ * log file.
+ *
+ * @param captlogFile - The file to append to
+ * @returns A Result indication operation success.
+ */
 async function appendDailyTemplate(captlogFile: File): Promise<Result<void, string>> {
     const delimLine = getDailyDelimiterLine();
 
