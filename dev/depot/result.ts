@@ -103,15 +103,287 @@ export type Result<TSuccess, TError> = SucceededResult<TSuccess> | FailedResult<
  */
 export namespace Result {
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // allM()
+    ////////////////////////////////////////////////////////////////////////////////
+
     /**
-     * When all input Results are successful, returns a successful Result containing
-     * an array of the successful values.  If the input contains one (or more)
-     * failures, a failed Result is returned containing the first error.
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA>(
+        a: Result<TSA, TFA>
+    ): Result<[TSA], TFA>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>
+    ): Result<[TSA, TSB], TFA | TFB>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>
+    ): Result<[TSA, TSB, TSC], TFA | TFB | TFC>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>
+    ): Result<[TSA, TSB, TSC, TSD], TFA | TFB | TFC | TFD>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>
+    ): Result<[TSA, TSB, TSC, TSD, TSE], TFA | TFB | TFC | TFD | TFE>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF], TFA | TFB | TFC | TFD | TFE | TFF>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @param g - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF, TSG, TFG>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>,
+        g: Result<TSG, TFG>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF, TSG], TFA | TFB | TFC | TFD | TFE | TFF | TFG>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @param g - Result
+     * @param h - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF, TSG, TFG, TSH, TFH>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>,
+        g: Result<TSG, TFG>,
+        h: Result<TSH, TFH>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF, TSG, TSH], TFA | TFB | TFC | TFD | TFE | TFF | TFG | TFH>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @param g - Result
+     * @param h - Result
+     * @param i - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF, TSG, TFG, TSH, TFH, TSI, TFI>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>,
+        g: Result<TSG, TFG>,
+        h: Result<TSH, TFH>,
+        i: Result<TSI, TFI>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF, TSG, TSH, TSI], TFA | TFB | TFC | TFD | TFE | TFF | TFG | TFH | TFI>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @param g - Result
+     * @param h - Result
+     * @param i - Result
+     * @param j - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF, TSG, TFG, TSH, TFH, TSI, TFI, TSJ, TFJ>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>,
+        g: Result<TSG, TFG>,
+        h: Result<TSH, TFH>,
+        i: Result<TSI, TFI>,
+        j: Result<TSJ, TFJ>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF, TSG, TSH, TSI, TSJ], TFA | TFB | TFC | TFD | TFE | TFF | TFG | TFH | TFI | TFJ>;
+
+    /**
+     * Tests if all Results are successful.  If not, returns the first failure.
+     *
+     * @param a - Result
+     * @param b - Result
+     * @param c - Result
+     * @param d - Result
+     * @param e - Result
+     * @param f - Result
+     * @param g - Result
+     * @param h - Result
+     * @param i - Result
+     * @param j - Result
+     * @param k - Result
+     * @returns If all Results are successful, a successful Result wrapping a
+     * tuple of the values.  Otherwise, the first failure Result is returned.
+     */
+    export function allM<TSA, TFA, TSB, TFB, TSC, TFC, TSD, TFD, TSE, TFE, TSF, TFF, TSG, TFG, TSH, TFH, TSI, TFI, TSJ, TFJ, TSK, TFK>(
+        a: Result<TSA, TFA>,
+        b: Result<TSB, TFB>,
+        c: Result<TSC, TFC>,
+        d: Result<TSD, TFD>,
+        e: Result<TSE, TFE>,
+        f: Result<TSF, TFF>,
+        g: Result<TSG, TFG>,
+        h: Result<TSH, TFH>,
+        i: Result<TSI, TFI>,
+        j: Result<TSJ, TFJ>,
+        k: Result<TSK, TFK>
+    ): Result<[TSA, TSB, TSC, TSD, TSE, TSF, TSG, TSH, TSI, TSJ, TSK], TFA | TFB | TFC | TFD | TFE | TFF | TFG | TFH | TFI | TFJ | TFK>;
+
+    export function allM(
+        ...results: Array<Result<unknown, unknown>>
+    ): Result<Array<unknown>, unknown> {
+        const firstFailureIdx = results.findIndex((res) => res.failed);
+        if (firstFailureIdx === -1) {
+            const successVals = results.map((res) => res.value!);
+            return new SucceededResult(successVals);
+        }
+        else {
+            const failedResult = results[firstFailureIdx] as FailedResult<unknown>;
+            return failedResult;
+        }
+    }
+
+
+    /**
+     * Tests if all Results are successful.  If not, all errors are returned.
      *
      * @param resultsCollection - The input collection
-     * @return Description
+     * @returns If all inputs are successful, a successful Result containing
+     * their values.  If the input contains some failures, a failure Result
+     * containing an array of the errors.
      */
-    export function all<TSuccess, TError>(
+    export function allArrayA<TSuccess, TError>(
+        resultsCollection: Array<Result<TSuccess, TError>>
+    ): Result<Array<TSuccess>, Array<TError>> {
+        const failureResults = resultsCollection.filter((res) => res.failed);
+        if (failureResults.length > 0) {
+            return new FailedResult(failureResults.map((res) => res.error!));
+        }
+        else {
+            return new SucceededResult(resultsCollection.map((res) => res.value!));
+        }
+    }
+
+
+    /**
+     * Tests if all Results are successful.  If not, the first error is
+     * returned.
+     *
+     * @param resultsCollection - The input collection
+     * @returns If all inputs are successful, a successful Result containing
+     * their values.  If the input contains some failures, a failure Result
+     * containing the first error.
+     */
+    export function allArrayM<TSuccess, TError>(
         resultsCollection: Array<Result<TSuccess, TError>>
     ): Result<Array<TSuccess>, TError> {
         const firstFailure = resultsCollection.find(
@@ -530,13 +802,13 @@ export namespace Result {
      * successful Result containing _val_ and truthy values become a failed
      * Result containing the specified error message.
      *
-     * @param trueErrMsg - Error messaged use if the input is truthy
+     * @param trueErrVal - Error value use if the input is truthy
      * @param val - The input value
      * @returns A successful Result if the input is falsy; a failure Result
      * otherwise.
      */
-    export function requireFalsy<TVal>(trueErrMsg: string, val: TVal): Result<TVal, string> {
-        return val ? new FailedResult(trueErrMsg) : new SucceededResult(val);
+    export function requireFalsy<TError, TVal>(trueErrVal: TError, val: TVal): Result<TVal, TError> {
+        return val ? new FailedResult(trueErrVal) : new SucceededResult(val);
     }
 
 
@@ -544,16 +816,16 @@ export namespace Result {
      * Converts an object containing an _ok_ property (such as a fetch response)
      * to a Result.
      *
-     * @param errMsg - Error message to use if the ok property is false
+     * @param errVal - Error value to use if the ok property is false
      * @param val - The input object that has an ok property
      * @returns If _ok_ is truthy, a successful Result wrapping _val_.
      * Otherwise, a failed Result containing the error message.
      */
-    export function requireOk<TVal extends {ok: boolean}>(
-        errMsg: string,
+    export function requireOk<TError, TVal extends {ok: boolean}>(
+        errVal: TError,
         val: TVal
-    ): Result<TVal, string> {
-        return val.ok ? new SucceededResult(val) : new FailedResult(errMsg);
+    ): Result<TVal, TError> {
+        return val.ok ? new SucceededResult(val) : new FailedResult(errVal);
     }
 
 
@@ -562,13 +834,13 @@ export namespace Result {
      * Result containing true and falsy values become a failed Result containing
      * the specified error message.
      *
-     * @param falseErrMsg - Error message used if the input is falsy
+     * @param errVal - Error value used if the input is falsy
      * @param val - The input value
      * @returns A successful Result if the input is truthy; a failure Result
      * otherwise.
      */
-    export function requireTruthy<TVal>(falseErrMsg: string, val: TVal): Result<TVal, string> {
-        return val ? new SucceededResult(val) : new FailedResult(falseErrMsg);
+    export function requireTruthy<TError, TVal>(errVal: TError, val: TVal | undefined | null): Result<TVal, TError> {
+        return val ? new SucceededResult(val) : new FailedResult(errVal);
     }
 
 
@@ -632,11 +904,41 @@ export namespace Result {
      * @param result - The input Result
      * @returns The unwrapped successful Result value
      */
-    export function throwIfFailed<TSuccess, TError>(errorMsg: string, result: Result<TSuccess, TError>): TSuccess {
-        if (result.failed) {
-            throw new Error(errorMsg);
+    export function throwIfFailed<TSuccess, TError>(
+        errorMsg: string,
+        result: Result<TSuccess, TError>
+    ): TSuccess;
+
+    /**
+     * Unwraps a successful Result, throwing if it is a failure.
+     *
+     * @param errorMapFn - A function that converts the error to an error
+     * message.  The returned string will be the thrown Error object's message.
+     * @param result - The input Result
+     * @returns The unwrapped successful Result value
+     */
+    export function throwIfFailed<TSuccess, TError>(
+        errorMapFn: (err: TError) => string,
+        result: Result<TSuccess, TError>
+    ): TSuccess;
+
+    export function throwIfFailed<TSuccess, TError>(
+        errorMsgOrFn: string | ((err: TError) => string),
+        result: Result<TSuccess, TError>
+    ): TSuccess {
+
+        if (result.succeeded) {
+            return result.value;
         }
-        return result.value;
+
+        // The Result is a failure.  We must throw.
+
+        const errorMsg =
+            typeof errorMsgOrFn === "function" ?
+            errorMsgOrFn(result.error) :
+            errorMsgOrFn;
+
+        throw new Error(errorMsg);
     }
 
 
@@ -648,11 +950,40 @@ export namespace Result {
      * @param result - The input Result
      * @returns The unwrapped failed Result error.
      */
-    export function throwIfSucceeded<TSuccess, TError>(errorMsg: string, result: Result<TSuccess, TError>): TError {
-        if (result.succeeded) {
-            throw new Error(`${errorMsg}: ${JSON.stringify(result.error)}`);
+    export function throwIfSucceeded<TSuccess, TError>(
+        errorMsg: string,
+        result: Result<TSuccess, TError>
+    ): TError;
+
+    /**
+     * Unwraps a failed Result, throwing if it is a success.
+     *
+     * @param errorMapFn - A function that converts a successful Result to an
+     * error message.  The returned string will be the throw Error object's
+     * message.
+     * @param result - The input Result
+     * @returns The unwrapped failed Result error.
+     */
+    export function throwIfSucceeded<TSuccess, TError>(
+        errorMapFn: (val: TSuccess) => string,
+        result: Result<TSuccess, TError>
+    ): TError;
+
+    export function throwIfSucceeded<TSuccess, TError>(
+        errorMsgOrFn: string | ((val: TSuccess) => string),
+        result: Result<TSuccess, TError>
+    ): TError {
+        if (result.failed) {
+            return result.error;
         }
-        return result.error;
+
+        // The Result is a success.  We must throw.
+        const errorMsg =
+            typeof errorMsgOrFn === "function" ?
+            errorMsgOrFn(result.value) :
+            errorMsgOrFn;
+
+        throw new Error(errorMsg);
     }
 
 }

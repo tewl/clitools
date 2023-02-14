@@ -5,6 +5,8 @@ import {File} from "./file";
 import {promisify1} from "./promisify";
 import {sequence, mapAsync} from "./promiseHelpers";
 import {PathPart, reducePathParts} from "./pathHelpers";
+import { StorageSize } from "./storageSize";
+import { matchesAny } from "./regexpHelpers";
 
 
 const unlinkAsync = promisify1<void, string>(fs.unlink);
@@ -55,6 +57,7 @@ export class Directory {
 
     // region Data Members
     private readonly _dirPath: string;
+    private _cachedSize: StorageSize | undefined;
     // endregion
 
 
@@ -669,6 +672,96 @@ export class Directory {
 
 
     /**
+     * Copies the selected files and directories to `destDir`.
+     * @param destDir
+     * @param copyRoot
+     */
+    public async copyFiltered(
+        destDir: Directory,
+        copyRoot: boolean,
+        includeRegexes: Array<RegExp>,
+        excludeRegexes: Array<RegExp>
+    ): Promise<Directory> {
+        if (copyRoot) {
+            const thisDest: Directory = new Directory(destDir, this.dirName);
+            await thisDest.ensureExists();
+            await this.copyFiltered(thisDest, false, includeRegexes, excludeRegexes);
+            return thisDest;
+        }
+
+        await this.walk(async (fsItem) => {
+
+            const curItemRelative = fsItem instanceof Directory ?
+                Directory.relative(this, fsItem) :
+                File.relative(this, fsItem);
+
+            const relativeStr = curItemRelative.toString();
+            let shouldRecurse = false;
+
+            if (matchesAny(relativeStr, includeRegexes) &&
+                !matchesAny(relativeStr, excludeRegexes)) {
+                if (curItemRelative instanceof Directory) {
+                    const dstDir = new Directory(destDir, relativeStr);
+                    await dstDir.ensureExists();
+                    shouldRecurse = true;
+                }
+                else {
+                    const dstFile = new File(destDir, relativeStr);
+                    await (fsItem as File).copy(dstFile);
+                }
+            }
+
+            return shouldRecurse;
+        });
+
+        return destDir;
+    }
+
+
+    /**
+     * Copies the selected files and directories to `destDir`.
+     */
+    public async copyFilteredWith(
+        destDir: Directory,
+        copyRoot: boolean,
+        shouldCopyFn: (relFileOrDir: File | Directory) => boolean | Promise<boolean>
+    ): Promise<Directory> {
+        if (copyRoot) {
+            const thisDest: Directory = new Directory(destDir, this.dirName);
+            await thisDest.ensureExists();
+            await this.copyFilteredWith(thisDest, false, shouldCopyFn);
+            return thisDest;
+        }
+
+        await this.walk(async (fsItem) => {
+
+            const curItemRelative = fsItem instanceof Directory ?
+                Directory.relative(this, fsItem) :
+                File.relative(this, fsItem);
+
+            let shouldRecurse = false;
+
+            const shouldCopy = await Promise.resolve(shouldCopyFn(curItemRelative));
+            if (shouldCopy) {
+                if (curItemRelative instanceof Directory) {
+                    const dstDir = new Directory(destDir, curItemRelative.toString());
+                    await dstDir.ensureExists();
+                    shouldRecurse = true;
+                }
+                else {
+                    const dstFile = new File(destDir, curItemRelative.toString());
+                    await (fsItem as File).copy(dstFile);
+                }
+            }
+
+            return shouldRecurse;
+        });
+
+        return destDir;
+    }
+
+
+    /**
      * Moves this Directory or the contents of this Directory to `destDir`.
      * @param destDir - The destination directory
      * @param moveRoot - If true, this directory name will be a subdirectory of
@@ -719,5 +812,43 @@ export class Directory {
                 await curSubDir.walk(cb);
             }
         }
+    }
+
+
+    /**
+     * Calculates the size of this Directory.
+     *
+     * @returns The size of all files (recursively) in this Directory.
+     */
+    public async getSize(refresh = true): Promise<StorageSize> {
+        // Note: Calling fs.stat() on a directory returns a size of 0.
+        // Therefore, we must sum the size of files.
+
+        if (refresh || this._cachedSize === undefined) {
+            const {files} = await this.contents(true);
+            const totalBytes =
+                (await Promise.all(files.map((curFile) => curFile.exists())))
+                .filter((stat): stat is fs.Stats => stat !== undefined)
+                .reduce((acc, stat) => acc + stat.size, 0);
+            this._cachedSize = StorageSize.fromBytes(totalBytes);
+        }
+
+        return this._cachedSize!;
+    }
+
+
+    /**
+     * Calculates the size of this Directory.
+     *
+     * @returns The size of all files (recursively) in this Directory.
+     */
+    public getSizeSync(): StorageSize {
+        const {files} = this.contentsSync(true);
+        const totalBytes =
+            files
+            .map((curFile) => curFile.existsSync())
+            .filter((stat): stat is fs.Stats => stat !== undefined)
+            .reduce((acc, stat) => acc + stat.size, 0);
+        return StorageSize.fromBytes(totalBytes);
     }
 }
