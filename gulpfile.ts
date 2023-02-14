@@ -54,20 +54,19 @@ const headerStyle  = chalk.bold;
 // clean
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function clean(): Promise<void>
-{
+export async function clean(): Promise<void> {
     return promiseResult.toPromise(runClean());
 }
 
 
-async function runClean(): Promise<Result<undefined, string>>
-{
+function runClean(): Promise<Result<undefined, string>> {
     const dirsToDelete = [tmpDir, distDir];
     try {
         dirsToDelete.forEach((curDir) => curDir.deleteSync());
-        return new SucceededResult(undefined);
-    } catch (error) {
-        return new FailedResult(`Failed to delete files. ${JSON.stringify(error, undefined, 4)}`);
+        return Promise.resolve(new SucceededResult(undefined));
+    }
+    catch (error) {
+        return Promise.resolve(new FailedResult(`Failed to delete files. ${JSON.stringify(error, undefined, 4)}`));
     }
 }
 
@@ -76,8 +75,7 @@ async function runClean(): Promise<Result<undefined, string>>
 // eslint
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function eslint(): Promise<void>
-{
+export async function eslint(): Promise<void> {
     const result = await runEslint();
     if (result.succeeded) {
         // We still need to print the eslint output, because it may contain
@@ -92,8 +90,7 @@ export async function eslint(): Promise<void>
 }
 
 
-async function runEslint(): Promise<Result<string, SpawnError>>
-{
+async function runEslint(): Promise<Result<string, SpawnError>> {
     const eslintArgs = [
         ".",
         "--ext", ".js",
@@ -112,8 +109,7 @@ async function runEslint(): Promise<Result<string, SpawnError>>
 // Unit Tests
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function ut(): Promise<void>
-{
+export async function ut(): Promise<void> {
     const result = await runUnitTests(true);
     if (result.succeeded) {
         // Since we allowed output while running the unit test task, we don't
@@ -129,8 +125,7 @@ export async function ut(): Promise<void>
 
 async function runUnitTests(
     allowOutput: boolean
-): Promise<Result<string, SpawnError>>
-{
+): Promise<Result<string, SpawnError>> {
     const jasmineConfigFile = new File(".", "jasmine.json");
 
     // A typical command line looks something like:
@@ -163,8 +158,7 @@ async function runUnitTests(
 // Compile
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function compile(): Promise<void>
-{
+export async function compile(): Promise<void> {
     const tsconfigFile = new File("tsconfig.json");
     const result = await runCompile(tsconfigFile);
     if (result.succeeded) {
@@ -177,8 +171,7 @@ export async function compile(): Promise<void>
 }
 
 
-async function runCompile(tsconfigFile: File): Promise<Result<string, SpawnError>>
-{
+async function runCompile(tsconfigFile: File): Promise<Result<string, SpawnError>> {
     // A typical command line looks something like:
     // _ ./node_modules/.bin/tsc --project ./tsconfig.json _
     const cmd = nodeBinForOs(path.join(".", "node_modules", ".bin", "tsc")).toString();
@@ -196,8 +189,7 @@ async function runCompile(tsconfigFile: File): Promise<Result<string, SpawnError
 // Build
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function build(): Promise<void>
-{
+export async function build(): Promise<void> {
     const cleanResult = await runClean();
     if (cleanResult.failed) {
         throw toGulpError(cleanResult.error);
@@ -264,8 +256,7 @@ export async function build(): Promise<void>
  * executed.
  * @return A promise that resolves when all operations have completed.
  */
-function makeExecutable(): Promise<void>
-{
+function makeExecutable(): Promise<void> {
     const scriptFiles = _.map(scripts, (curScript) => new File(distDir, curScript));
 
     //
@@ -289,11 +280,15 @@ function makeExecutable(): Promise<void>
                 console.log(`Created Windows cmd file:  ${cmdFile.fileName}`);
             });
         })
-        .then(() => {});
+        .then(() => {
+            // Do nothing.
+        });
     }
 
-    return Promise.all([ makeExecutablePromises, createCmdPromises])
-    .then(() => {});
+    return Promise.all([makeExecutablePromises, createCmdPromises])
+    .then(() => {
+        // Do nothing.
+    });
 }
 
 
@@ -301,8 +296,7 @@ function makeExecutable(): Promise<void>
 // updateDistSaved
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function updateDistSaved(): Promise<void>
-{
+export function updateDistSaved(): Promise<void> {
     const distSrcDir = new Directory(distDir, "src");
     const distSavedDir = new Directory("dist-saved");
 
@@ -316,4 +310,5 @@ export async function updateDistSaved(): Promise<void>
     //
     distSrcDir.copySync(distSavedDir, true);
 
+    return Promise.resolve();
 }

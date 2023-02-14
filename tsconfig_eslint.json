@@ -1,0 +1,13 @@
+// This TS project file exists for the sole purpose of specifying what files
+// should be linted.  This project file is referred to by .eslintrc.json.
+{
+  "extends": "./tsconfig_base",
+  "include": [
+      "src/**/*",
+      "test/**/*",
+      "dev/**/*",
+      "./gulpfile.ts"
+  ],
+  "exclude": [
+  ]
+}
