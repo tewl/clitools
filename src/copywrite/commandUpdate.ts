@@ -1,4 +1,3 @@
-import * as _ from "lodash";
 import {Argv, Arguments} from "yargs";
 import {Directory} from "../depot/directory";
 import {File} from "../depot/file";
@@ -54,13 +53,12 @@ export function handler(args: Arguments): void {
         // Take all of the file names found in the destination directory, and
         // transform it into an array of file copy operations when there is a
         // source file with the same name.
-        let copyOperations: Array<CopyOperation> = _.reduce<string, Array<CopyOperation>>(
-            Object.keys(dstMap),
+        let copyOperations: Array<CopyOperation> = Array.from(dstMap.keys()).reduce<Array<CopyOperation>>(
             (acc, curDstFileName) => {
                 // If the current destination file is also a source file, create
                 // a copy operation for it.
-                if (srcMap[curDstFileName]) {
-                    const copyOperation = new CopyOperation(srcMap[curDstFileName], dstMap[curDstFileName]);
+                if (srcMap.has(curDstFileName)) {
+                    const copyOperation = new CopyOperation(srcMap.get(curDstFileName)!, dstMap.get(curDstFileName)!);
                     acc.push(copyOperation);
                 }
                 return acc;
@@ -70,14 +68,15 @@ export function handler(args: Arguments): void {
 
         // For each copy operation, find out if the source and destination files
         // are identical.
-        const areIdenticalPromises = _.map(copyOperations,
-                                           (curCopyOperation) => curCopyOperation.filesAreIdentical());
+        const areIdenticalPromises = copyOperations.map(
+            (curCopyOperation) => curCopyOperation.filesAreIdentical()
+        );
+
         return Promise.all(areIdenticalPromises)
         .then((areIdenticalResults) => {
             // Filter the array of copy operations to include only the ones
             // where the source and destination files are not identical.
-            copyOperations = _.filter(copyOperations,
-                                      (curCopyOperation, index) => !areIdenticalResults[index]);
+            copyOperations = copyOperations.filter((curCopyOperation, index) => !areIdenticalResults[index]);
 
             return copyOperations;
         });
@@ -92,9 +91,9 @@ export function handler(args: Arguments): void {
         else {
             // Create tuples where the first value is the source file and the
             // second value is the destination file.
-            const rows = _.map(copyOperations, (curCopyOperation) => {
-                return [curCopyOperation.source.toString(), curCopyOperation.destination.toString()];
-            });
+            const rows = copyOperations.map(
+                (curCopyOperation) => [curCopyOperation.source.toString(), curCopyOperation.destination.toString()]
+            );
             const previewTable = table(rows, {hsep: " ==> "});
             console.log(previewTable);
             return promptToContinue(
@@ -107,8 +106,7 @@ export function handler(args: Arguments): void {
         }
     })
     .then((copyOperations) => {
-        const copyPromises = _.map(copyOperations,
-                                   (curCopyOperation) => curCopyOperation.execute());
+        const copyPromises = copyOperations.map((curCopyOperation) => curCopyOperation.execute());
         return Promise.all(copyPromises);
     })
     .then((dstFiles) => {
@@ -117,24 +115,31 @@ export function handler(args: Arguments): void {
 }
 
 
-function getFileMap(dir: Directory): Promise<{[s: string]: File}> {
+/**
+ * Maps a filename (with no preceding path) to a File instance with that name.
+ */
+export type FileNameMap = Map<string, File>;
+
+
+/**
+ *  Creates a map containing all files found (recursively) in the specified
+ *  directory.
+ *
+ * @param dir - The directory to find files in
+ * @return A Promise for a mapping of all found files
+ */
+function getFileMap(dir: Directory): Promise<FileNameMap> {
     // TODO: What should be done if the same filename is seen in multiple
     // directories?
 
     // Recursively get all files in the directory.
     return dir.contents(true)
     .then((directoryContents) => {
-        const dstFiles = directoryContents.files;
-
         // Reduce the array of files into an object where the file name (no
         // path) is the key and the File object is the value.
-        return _.reduce<File, {[s: string]: File}>(
-            dstFiles,
-            (acc, curDstFile) => {
-                acc[curDstFile.fileName] = curDstFile;
-                return acc;
-            },
-            {}
+        return directoryContents.files.reduce(
+            (acc, curFile) => acc.set(curFile.fileName, curFile),
+            new Map<string, File>()
         );
     });
 }
