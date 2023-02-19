@@ -1,11 +1,11 @@
 import * as os from "os";
-import * as fs from "fs";
 import * as yargs from "yargs";
 import { Directory } from "./depot/directory";
 import { File } from "./depot/file";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
 import {getDocumentsFolder} from "platform-folders";
 import { CompareResult, compareStrI } from "./depot/compare";
+import { getMostRecentlyModified } from "./depot/filesystemHelpers";
 
 
 
@@ -96,56 +96,11 @@ async function getMostRecentSharexScreenCapture(): Promise<Result<File, string>>
     }
 
     // Find the most recently modified file within the monthly directory.
-    const screenshotFiles = (await dirRes.value.contents(false)).files;
+    const screenshotFiles = (await dirRes.value.fsItem.contents(false)).files;
     const mostRecentScreenshotFileRes = await getMostRecentlyModified(screenshotFiles);
     if (mostRecentScreenshotFileRes.failed) {
         return mostRecentScreenshotFileRes;
     }
 
-    return new SucceededResult(mostRecentScreenshotFileRes.value);
-}
-
-
-interface IFsItemWithModifiedMs<TFsItem> {
-    fsItem: TFsItem;
-    mtimeMs: number;
-}
-
-interface IStatable {
-    exists(): Promise<fs.Stats | undefined>;
-}
-
-async function getMostRecentlyModified<TFsItem extends IStatable>(
-    fsItems: Array<TFsItem>
-): Promise<Result<TFsItem, string>> {
-
-    if (fsItems.length === 0) {
-        return new FailedResult(`No filesystem elements were specified, so their modified timestamps cannot be compared.`);
-    }
-
-    // Get the stats for all the filesystem items.  We will get back an object
-    // containing the filesystem item and its modified timestamp.
-    const promises =
-        fsItems
-        .map((fsItem) => {
-            return fsItem.exists()
-            .then((stats) => {
-                return stats ?
-                    {
-                        fsItem:  fsItem,
-                        mtimeMs: stats.mtimeMs
-                    } as IFsItemWithModifiedMs<TFsItem> :
-                    undefined;
-            });
-        });
-
-    const mostRecent =
-        (await Promise.all(promises))
-        // Remove any items that could not be stated.
-        .filter((fsItem): fsItem is IFsItemWithModifiedMs<TFsItem> => fsItem !== undefined)
-        // Reduce the array to the one item with the largest modified timestamp.
-        .reduce(
-            (acc, fsItem) => fsItem.mtimeMs > acc.mtimeMs ? fsItem : acc
-        );
-    return new SucceededResult(mostRecent.fsItem);
+    return new SucceededResult(mostRecentScreenshotFileRes.value.fsItem);
 }
