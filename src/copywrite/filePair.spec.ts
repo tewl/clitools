@@ -1,4 +1,4 @@
-describe("CopyOperation", () => {
+describe("FilePair", () => {
 
 
     // TODO: Create unit tests.
