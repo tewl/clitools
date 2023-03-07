@@ -24,24 +24,24 @@ if (require.main === module) {
 async function main(): Promise<Result<undefined, string>> {
     // Append to the captlog file if needed.
     const captlogRes = await appendToCaptlogIfNeeded();
+    const fortyThreeFoldersRes = getFortyThreeFoldersFile();
     const todoFileRes = getTodoFile();
     const clipPaletteFileRes = getClipPaletteFile();
     const notesDirRes = getNotesFolder();
 
-    const allRes = Result.allM(captlogRes, todoFileRes, clipPaletteFileRes, notesDirRes);
+    const allRes = Result.allM(
+        fortyThreeFoldersRes,
+        todoFileRes,
+        clipPaletteFileRes,
+        notesDirRes,
+        // Last item will be the one on top in Emacs
+        captlogRes
+    );
     if (allRes.failed) {
         return allRes;
     }
 
-    openInEmacs(
-        [
-            allRes.value[2],
-            allRes.value[3],
-            allRes.value[0],
-            allRes.value[1]
-        ],
-        false
-    );
+    openInEmacs([...allRes.value], false);
 
     return new SucceededResult(undefined);
 }
@@ -74,4 +74,14 @@ function getNotesFolder(): Result<Directory, string> {
     }
 
     return new SucceededResult(new Directory(cloudHome, "data", "notes"));
+}
+
+
+function getFortyThreeFoldersFile(): Result<File, string> {
+    const cloudHome = process.env.CLOUDHOME;
+    if (!cloudHome) {
+        return new FailedResult(`CLOUDHOME environment variable is not set.`);
+    }
+
+    return new SucceededResult(new File(cloudHome, "data", "43_folders", "43_folders.org"));
 }
