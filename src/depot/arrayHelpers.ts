@@ -104,3 +104,42 @@ export function split<T>(arr: Array<T>, numToTake: number): [Array<T>, Array<T>]
     const second = arr.slice(first.length);
     return [first, second];
 }
+
+
+/**
+ * Takes an input array and groups consecutive similar items together (as
+ * determined by _isSimilarFn_).
+ *
+ * @param items - Items to be grouped
+ * @param isSimilarFn - A function that determines whether any two items can be
+ * grouped together
+ * @return An array of arrays.  Each inner array is a grouping of consecutive
+ * items from the source array that are considered similar.  The order of the
+ * items is unchanged from the input.
+ */
+export function groupConsecutiveBy<T>(items: T[], isSimilarFn: (a: T, b: T) => boolean): T[][] {
+    const groups: T[][] = [];
+    let currentGroup: T[] = [];
+    let prevItem: T | undefined = undefined;
+
+    for (const currentItem of items) {
+        // If this is the first item or it is similar to the previous item, add
+        // it to the current group.
+        if (prevItem === undefined || isSimilarFn(currentItem, prevItem!)) {
+            currentGroup.push(currentItem);
+        }
+        else {
+            // Push the previous (completed) group, and start a new group with
+            // the current item.
+            groups.push(currentGroup);
+            currentGroup = [currentItem];
+        }
+
+        prevItem = currentItem;
+    }
+
+    if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+    }
+    return groups;
+}

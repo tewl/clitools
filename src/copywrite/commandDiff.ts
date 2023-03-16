@@ -1,10 +1,11 @@
+import * as path from "path";
 import {Argv, Arguments} from "yargs";
 import {Directory} from "../depot/directory";
 import {FilePair} from "./filePair";
-import table from "text-table";
-import {promptForChoice, promptToContinue} from "../depot/prompts";
+import {promptForChoice} from "../depot/prompts";
 import {getFileMap} from "./fileMap";
 import { showVsCodeDiff } from "../depot/fileDiff";
+import { elideEqual } from "../depot/stringDiff";
 
 
 export const command = "diff <sourceDir> <destDir>";
@@ -73,13 +74,25 @@ export async function handler(args: Arguments): Promise<void> {
     // do.
     for (const curFilePair of filePairs) {
 
-        // If the files are identical, just print a message and move to the next.
-        if (await curFilePair.filesAreIdentical()) {
-            console.log(`File ${curFilePair.fileB.fileName} is identical.`);
-        }
+        const [aAbbrevParts, bAbbrevParts] =
+            elideEqual(curFilePair.fileA.toString(), curFilePair.fileB.toString(), path.sep, "...", 1, 1);
+
+        const aAbbrev = aAbbrevParts.join(path.sep);
+        const bAbbrev = bAbbrevParts.join(path.sep);
+
+        console.log(``);
+        console.log(aAbbrev);
+        console.log(bAbbrev);
 
         let done = false;
         while (!done) {
+
+            // If the files are identical, just print a message and move to the next.
+            if (await curFilePair.filesAreIdentical()) {
+                console.log(`Files are identical.`);
+                done = true;
+                continue;
+            }
 
             const value = await promptForChoice(
                 `File: ${curFilePair.fileB.fileName}`,
@@ -92,7 +105,6 @@ export async function handler(args: Arguments): Promise<void> {
 
             if (value === "diff") {
                 await showVsCodeDiff(curFilePair.fileA, curFilePair.fileB, false, true);
-                console.log("It returned");
             }
             else if (value === "next") {
                 done = true;
