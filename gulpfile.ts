@@ -6,7 +6,7 @@ import { Directory } from "./dev/depot/directory";
 import { toGulpError } from "./dev/depot/gulpHelpers";
 import { File } from "./dev/depot/file";
 import { getOs, OperatingSystem } from "./dev/depot/os";
-import { spawn, SpawnError, spawnErrorToString } from "./dev/depot/spawn2";
+import { spawn, spawnErrorToString } from "./dev/depot/spawn2";
 import { hr } from "./dev/depot/ttyHelpers";
 import * as promiseResult from "./dev/depot/promiseResult";
 import { mapAsync } from "./dev/depot/promiseHelpers";
@@ -226,7 +226,7 @@ export async function build(): Promise<void> {
         console.error(failStyle(sep));
         console.error(failStyle(`❌ Task failed: ${tasks[results.error.index]!.name}`));
         console.error(failStyle(sep));
-        console.error(spawnErrorToString(results.error.item));
+        console.error(results.error.item);
         throw toGulpError("❌ " + failStyle("Build failed."));
     }
     else {
