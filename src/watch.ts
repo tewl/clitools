@@ -129,6 +129,7 @@ function main(): void {
     let isEnabled = true;
     let timerId: NodeJS.Timer | undefined | "pending";
     let spawnResult: ISpawnResult | undefined;
+    let killInProgress = false;
 
     //
     // Setup keypresses so that they too can trigger the command.
@@ -184,6 +185,7 @@ function main(): void {
         if (key.ctrl && key.name === "c") {
             _.forEach(watchListenerTracker, (curWatcher) => curWatcher.removeAll());
             if (spawnResult) {
+                killInProgress = true;
                 treeKill(spawnResult.childProcess.pid!);
             }
 
@@ -228,6 +230,7 @@ function main(): void {
             if (spawnResult) {
                 // The process is currently running.  Kill it.
                 console.log(STOP_TEXT("----- Killing current child process. -----"));
+                killInProgress = true;
                 treeKill(spawnResult.childProcess.pid!);
 
                 promise = spawnResult.closePromise
@@ -249,6 +252,7 @@ function main(): void {
                 // Intentionally empty
             })
             .then(() => {
+                killInProgress = false;
                 timerId = setTimeout(performAction, DEBOUNCE_DELAY);
             });
         }
@@ -276,22 +280,33 @@ function main(): void {
 
         spawnResult.closePromise
         .then(() => {
-            const endTimestamp = new Date().toLocaleString("en-US");
-            const msg = `✓ Success: ${commandStr}\n` +
-                        `  started:  ${startTimestamp}\n`  +
-                        `  finished: ${endTimestamp}`;
-            console.log(SUCCESS_TEXT(msg));
+            if (killInProgress) {
+                console.log("Process killed.");
+            }
+            else {
+                const endTimestamp = new Date().toLocaleString("en-US");
+                const msg = `✓ Success: ${commandStr}\n` +
+                    `  started:  ${startTimestamp}\n` +
+                    `  finished: ${endTimestamp}`;
+                console.log(SUCCESS_TEXT(msg));
+            }
         })
         .catch(() => {
-            // This is here so we don't get unhandled rejection messages.
-            const endTimestamp = new Date().toLocaleString("en-US");
-            const msg = `✗ Failed: ${commandStr}\n` +
-                        `  started:  ${startTimestamp}\n`  +
-                        `  finished: ${endTimestamp}`;
-            console.log(FAIL_TEXT(msg));
+            if (killInProgress) {
+                console.log("Process killed.");
+            }
+            else {
+                // This is here so we don't get unhandled rejection messages.
+                const endTimestamp = new Date().toLocaleString("en-US");
+                const msg = `✗ Failed: ${commandStr}\n` +
+                    `  started:  ${startTimestamp}\n` +
+                    `  finished: ${endTimestamp}`;
+                console.log(FAIL_TEXT(msg));
+            }
         })
         .finally(() => {
             console.log("");
+            // timerId = undefined;
             spawnResult = undefined;
         });
     }
