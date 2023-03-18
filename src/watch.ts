@@ -9,6 +9,7 @@ import {File} from "./depot/file";
 import {ListenerTracker} from "./depot/listenerTracker";
 import {spawn, ISpawnResult} from "./depot/spawn";
 import {getOs, OperatingSystem} from "./depot/os";
+import treeKill from "tree-kill";
 
 const DEBOUNCE_DELAY = 1500;
 const SEP = "================================================================================";
@@ -126,7 +127,7 @@ function main(): void {
     });
 
     let isEnabled = true;
-    let timerId: NodeJS.Timer | undefined;
+    let timerId: NodeJS.Timer | undefined | "pending";
     let spawnResult: ISpawnResult | undefined;
 
     //
@@ -171,7 +172,7 @@ function main(): void {
      * @param key - Information about the key that was pressed
      */
     function onKeypress(str: string, key: Key): void {
-        // Allow ctrl+c to exit the process.
+        // Allow ctrl+p to pause/unpause watching.
         if (!key.ctrl && !key.meta && key.name === "p") {
             isEnabled = !isEnabled;
             const msg = isEnabled ? "unpaused" : "paused";
@@ -179,9 +180,20 @@ function main(): void {
             return;
         }
 
+        // Allow ctrl+c to exit the process.
         if (key.ctrl && key.name === "c") {
             _.forEach(watchListenerTracker, (curWatcher) => curWatcher.removeAll());
-            process.exit();
+            if (spawnResult) {
+                treeKill(spawnResult.childProcess.pid!);
+            }
+
+            (spawnResult?.closePromise ?? Promise.resolve(undefined))
+            .catch(() => {
+                // Intentionally empty
+            })
+            .then(() => {
+                process.exit();
+            });
             return;
         }
 
@@ -198,14 +210,48 @@ function main(): void {
      * any in-progress commands and debouncing triggers.
      */
     function trigger(): void {
-        if (spawnResult) {
-            console.log(STOP_TEXT("----- Killing current child process. -----"));
-            spawnResult.childProcess.kill();
+
+        if (timerId !== undefined) {
+
+            if (timerId !== "pending") {
+                clearTimeout(timerId);
+                timerId = setTimeout(performAction, DEBOUNCE_DELAY);
+            }
+
+            return;
         }
-        if (timerId) {
-            clearTimeout(timerId);
+        else {
+            // Prevent another trigger from queueing another launch.
+            timerId = "pending";
+
+            let promise: Promise<void>;
+            if (spawnResult) {
+                // The process is currently running.  Kill it.
+                console.log(STOP_TEXT("----- Killing current child process. -----"));
+                treeKill(spawnResult.childProcess.pid!);
+
+                promise = spawnResult.closePromise
+                .then(
+                    () => {
+                        // Intentionally empty
+                    },
+                    () => {
+                        // Intentionally empty
+                    }
+                );
+            }
+            else {
+                promise = Promise.resolve(undefined);
+            }
+
+            promise
+            .catch(() => {
+                // Intentionally empty
+            })
+            .then(() => {
+                timerId = setTimeout(performAction, DEBOUNCE_DELAY);
+            });
         }
-        timerId = setTimeout(performAction, DEBOUNCE_DELAY);
     }
 
 
@@ -220,13 +266,15 @@ function main(): void {
         console.log(START_TEXT(`Executing command ${commandStr}`));
         console.log(START_TEXT(SEP));
 
+        timerId = undefined;
+
         let spawnOptions: cp.SpawnOptions | undefined;
         if (getOs() === OperatingSystem.Windows) {
             spawnOptions = {shell: true};
         }
         spawnResult = spawn(config.cmd, config.cmdArgs, spawnOptions, undefined, process.stdout, process.stderr);
 
-        Promise.resolve(spawnResult.closePromise)
+        spawnResult.closePromise
         .then(() => {
             const endTimestamp = new Date().toLocaleString("en-US");
             const msg = `✓ Success: ${commandStr}\n` +
