@@ -37,8 +37,21 @@ interface IWatchConfig {
  * @return The configuration parameters for this script
  */
 function getConfiguration(): IWatchConfig {
+
+    const usage = [
+        "Watches files and runs a command line when they change.",
+        "- Watching can be paused/unpaused using ctrl+p.",
+        "- Supports manual triggering by pressing any key.",
+        "- If the spawned process is still running when another trigger",
+        "  is received, the current process (and any child processes)",
+        "  are killed.",
+        "- ctrl+c to exit",
+        "",
+        'watch --watch <dir>... --ignore <regex>... "command"',
+    ];
+
     const argv = yargs
-    .usage("Watches a directory.")
+    .usage(usage.join("\n"))
     .help()
     .option(
         "watch",
@@ -46,7 +59,7 @@ function getConfiguration(): IWatchConfig {
             demandOption: false,
             type:         "string",
             default:      ".",
-            describe:     "specify a directory to watch."
+            describe:     "a directory to watch (can be used multiple times)"
         }
     )
     .option(
