@@ -3,7 +3,7 @@ import { Directory } from "./depot/directory";
 import { File } from "./depot/file";
 import { openInEmacs } from "./depot/editor";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
-
+import { getFortyThreeFoldersFile } from "./fortyThreeFolders";
 
 if (require.main === module) {
     // main() can return a failed result or reject.
@@ -24,7 +24,7 @@ if (require.main === module) {
 async function main(): Promise<Result<undefined, string>> {
     // Append to the captlog file if needed.
     const captlogRes = await appendToCaptlogIfNeeded();
-    const fortyThreeFoldersRes = getFortyThreeFoldersFile();
+    const fortyThreeFoldersRes = await getFortyThreeFoldersFile();
     const todoFileRes = getTodoFile();
     const clipPaletteFileRes = getClipPaletteFile();
     const notesDirRes = getNotesFolder();
@@ -74,14 +74,4 @@ function getNotesFolder(): Result<Directory, string> {
     }
 
     return new SucceededResult(new Directory(cloudHome, "data", "notes"));
-}
-
-
-function getFortyThreeFoldersFile(): Result<File, string> {
-    const cloudHome = process.env.CLOUDHOME;
-    if (!cloudHome) {
-        return new FailedResult(`CLOUDHOME environment variable is not set.`);
-    }
-
-    return new SucceededResult(new File(cloudHome, "data", "43_folders", "43_folders.org"));
 }
