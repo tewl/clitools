@@ -5,7 +5,7 @@ import { File } from "./depot/file";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
 
 
-const dateHeadlineRegex = /^\*\s+(?<month>\d{1,2})\/(?<day>\d{1,2})\/(?<year>\d{4})\s+\w+$/gm;
+const dateHeadlineRegex = /^\*\s+(?<month>\d{1,2})\/(?<day>\d{1,2})\/(?<year>\d{4})\s+\w+$/;
 const numYearsIntoFuture = 5;
 
 
