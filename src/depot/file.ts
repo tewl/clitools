@@ -22,6 +22,7 @@ export type ReadLinesCallback = (lineText: string, lineNum: number) => void;
 
 
 export class File {
+
     public static relative(from: Directory, to: File): File {
         const relPath = path.relative(from.toString(), to.toString());
         return new File(relPath);
@@ -47,6 +48,10 @@ export class File {
 
 
     public constructor(pathPart: PathPart, ...pathParts: Array<PathPart>) {
+        if (typeof pathPart === "string" && pathPart === "") {
+            throw new Error("File instance created with illegal first pathPart.");
+        }
+
         const allParts: Array<PathPart> = [pathPart].concat(pathParts);
         this._filePath = reducePathParts(allParts);
     }

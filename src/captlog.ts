@@ -2,6 +2,7 @@ import * as os from "os";
 import { File } from "./depot/file";
 import { FailedResult, Result, SucceededResult } from "./depot/result";
 import { openInEmacs } from "./depot/editor";
+import { dayOfWeek } from "./depot/dateHelpers";
 
 if (require.main === module) {
     // main() can return a failed result or reject.
@@ -67,7 +68,7 @@ export async function appendToCaptlogIfNeeded(): Promise<Result<File, string>> {
  */
 function getDailyDelimiterLine(): string {
     const now = new Date(Date.now());
-    const str = `${now.toLocaleDateString()} (${dayNumToDayName(now.getDay())})`;
+    const str = `${now.toLocaleDateString()} (${dayOfWeek(now)})`;
     const delim = `* ${str}`;
     return delim;
 
@@ -92,34 +93,6 @@ async function needToAppendDailyTemplate(captlogFile: File): Promise<boolean> {
     });
 
     return !delimFound;
-}
-
-
-/**
- * Helper function that converts a day integer into its string form.
- *
- * @param dayNum - The day number as specified by the JS Date API
- * @returns The day name
- */
-function dayNumToDayName(dayNum: number): string {
-    switch (dayNum) {
-        case 0:
-            return "Sunday";
-        case 1:
-            return "Monday";
-        case 2:
-            return "Tuesday";
-        case 3:
-            return "Wednesday";
-        case 4:
-            return "Thursday";
-        case 5:
-            return "Friday";
-        case 6:
-            return "Saturday";
-        default:
-            throw new Error(`Invalid day number: ${dayNum}.`);
-    }
 }
 
 
